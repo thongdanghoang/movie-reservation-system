@@ -1,6 +1,7 @@
 package com.atomicbunker.reservation.domain;
 
 import io.quarkus.hibernate.reactive.panache.PanacheEntityBase;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -19,7 +20,10 @@ public class Movie extends PanacheEntityBase {
     public UUID id;
 
     public String title;
+
+    @Column(name = "poster_url")
     public String posterUrl;
+
     public String genre;
 
     @Enumerated(EnumType.STRING)
