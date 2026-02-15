@@ -1,0 +1,23 @@
+# --- Standard Java/Quarkus ---
+**/target/
+**/*.class
+**/*.log
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# --- BMAD Specifics ---
+
+# Ignore raw brainstorming logs (too noisy, low value for version control)
+_bmad-output/brainstorming/
+
+# Ignore intermediate implementation artifacts (avoid duplication with /services)
+_bmad-output/implementation-artifacts/
+
+# KEEP planning artifacts (PRD, Architecture) as they are your "Docs as Code"
+# !_bmad-output/planning-artifacts/ 
+
+# If you use a local vector store or heavy dynamic memory, ignore it
+_bmad/_memory/vector_store/
+_bmad/_memory/chat_history/
