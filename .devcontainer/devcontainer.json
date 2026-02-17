@@ -19,20 +19,21 @@
         "com.samvtran.plugins.macosforallkeymap",
         "com.chylex.intellij.inspectionlens",
         "com.intellij.plugins.monokai.colorscheme",
-        "GrepConsole",
+        "GrepConsole"
       ]
     }
   },
   "features": {
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
     "ghcr.io/devcontainers/features/git:1": {
-      "ppa": false,
+      "ppa": false
     },
     "ghcr.io/devcontainers/features/node:1": {},
     "ghcr.io/roul/devcontainer-features/mise-java:1": {
       "version": "25"
     }
   },
+  "forwardPorts": [3000, 8080],
   "postCreateCommand": "npm i -g opencode-ai",
   // Comment out to connect as the root user.
   "remoteUser": "ubuntu"
