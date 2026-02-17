@@ -6,6 +6,14 @@ export interface Movie {
     status: 'NOW_PLAYING' | 'COMING_SOON';
 }
 
+export interface Showtime {
+    id: string;
+    movieId: string;
+    startTime: string;
+    theaterName: string;
+    availableSeats: number;
+}
+
 export interface MoviesResponse {
     movies: Movie[];
 }

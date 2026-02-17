@@ -1,5 +1,6 @@
 # --- Standard Java/Quarkus ---
 **/target/
+**/node_modules/
 **/*.class
 **/*.log
 .idea/
