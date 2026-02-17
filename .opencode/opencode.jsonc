@@ -20,11 +20,11 @@
       "enabled": true
     },
     "github": {
-      "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/server-github@latest"],
+      "type": "remote",
+      "url": "https://api.githubcopilot.com/mcp/",
       "enabled": true,
-      "environment": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "s3cr3t_t0k3n"
+      "headers": {
+        "Authorization": "Bearer changeme"
       }
     }
   }
