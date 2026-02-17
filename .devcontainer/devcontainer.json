@@ -24,6 +24,7 @@
     }
   },
   "features": {
+    "ghcr.io/schlich/devcontainer-features/playwright:0.2.0": {},
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
     "ghcr.io/devcontainers/features/git:1": {
       "ppa": false
