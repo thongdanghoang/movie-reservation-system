@@ -47,8 +47,10 @@ export default function BookingPage({ params }: BookingPageProps) {
         fetchSeats();
     }, [showtimeId, setSeats]);
 
+    const toggleSeatSelection = useSeatStore((state) => state.toggleSeatSelection);
+
     const handleSeatClick = (seat: Seat) => {
-        console.log('Seat clicked:', seat);
+        toggleSeatSelection(seat.id);
     };
 
     if (loading) {

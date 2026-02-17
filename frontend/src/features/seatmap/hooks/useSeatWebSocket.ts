@@ -15,7 +15,8 @@ export function useSeatWebSocket(showtimeId: string | null) {
         }
 
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = process.env.NEXT_PUBLIC_API_URL || 'localhost:8080';
+        const host = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080')
+            .replace(/^https?:\/\//, '');
         const wsUrl = `${protocol}//${host}/ws/seats/${showtimeId}`;
 
         try {

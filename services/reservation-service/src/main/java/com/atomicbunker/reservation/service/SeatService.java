@@ -4,6 +4,7 @@ import com.atomicbunker.reservation.domain.Seat;
 import com.atomicbunker.reservation.domain.SeatRepository;
 import com.atomicbunker.reservation.dto.SeatDTO;
 import io.quarkus.hibernate.reactive.panache.common.WithSession;
+import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -35,7 +36,7 @@ public class SeatService {
         return seatRepository.findById(seatId);
     }
 
-    @WithSession
+    @WithTransaction
     public Uni<Seat> updateSeatStatus(Seat seat) {
         return seatRepository.persist(seat);
     }

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SeatMap } from './SeatMap';
 import { useSeatStore } from '@/stores/seatStore';
@@ -46,10 +46,9 @@ describe('SeatMap', () => {
         const { container } = render(<SeatMap onSeatClick={onSeatClick} />);
 
         const seat = container.querySelector('rect[fill="#22c55e"]');
-        if (seat) {
-            fireEvent.click(seat);
-            expect(onSeatClick).toHaveBeenCalledWith(testSeats[0]);
-        }
+        expect(seat).not.toBeNull();
+        fireEvent.click(seat!);
+        expect(onSeatClick).toHaveBeenCalledWith(testSeats[0]);
     });
 
     it('does not call onSeatClick when clicking held seat', () => {
@@ -62,10 +61,9 @@ describe('SeatMap', () => {
         const { container } = render(<SeatMap onSeatClick={onSeatClick} />);
 
         const seat = container.querySelector('rect[fill="#f97316"]');
-        if (seat) {
-            fireEvent.click(seat);
-            expect(onSeatClick).not.toHaveBeenCalled();
-        }
+        expect(seat).not.toBeNull();
+        fireEvent.click(seat!);
+        expect(onSeatClick).not.toHaveBeenCalled();
     });
 
     it('displays zoom controls', () => {

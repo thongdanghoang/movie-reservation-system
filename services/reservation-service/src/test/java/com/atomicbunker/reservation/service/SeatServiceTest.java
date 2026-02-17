@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @QuarkusTest
@@ -35,6 +36,6 @@ public class SeatServiceTest {
         UUID seatId = UUID.randomUUID();
         
         asserter.assertThat(() -> seatService.findById(seatId),
-                seat -> assertNotNull(seat));
+                seat -> assertNull(seat));
     }
 }

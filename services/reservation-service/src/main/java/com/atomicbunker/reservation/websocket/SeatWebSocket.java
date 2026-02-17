@@ -52,7 +52,8 @@ public class SeatWebSocket {
     @OnMessage
     public void onMessage(String message, Session session, @PathParam("showtimeId") String showtimeId) {
         LOG.debugf("Received message for showtime %s: %s", showtimeId, message);
-        broadcastToShowtime(showtimeId, message);
+        // Client messages are not expected; server is the single source of truth
+        // Seat updates should only come from the server-side business logic
     }
 
     public void broadcastSeatUpdate(String showtimeId, Object seatUpdate) {
