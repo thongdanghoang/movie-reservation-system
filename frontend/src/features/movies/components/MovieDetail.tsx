@@ -30,8 +30,12 @@ export function MovieDetail({ movie, showtimes }: MovieDetailProps) {
                         {movie.title}
                     </h1>
                     <p className="text-lg text-gray-600 mb-6">{movie.genre}</p>
-                    <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                        Now Playing
+                    <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                        movie.status === 'NOW_PLAYING'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-blue-100 text-blue-800'
+                    }`}>
+                        {movie.status === 'NOW_PLAYING' ? 'Now Playing' : 'Coming Soon'}
                     </div>
                 </div>
             </div>

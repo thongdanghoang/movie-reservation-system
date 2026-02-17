@@ -11,9 +11,10 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.time.DateTimeException;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,7 +27,7 @@ public class ShowtimeResource {
 
     @GET
     @WithSession
-    public Uni<Response> getShowtimes(
+    public Uni<List<ShowtimeDTO>> getShowtimes(
             @PathParam("movieId") String movieIdStr,
             @QueryParam("date") String dateStr) {
 
@@ -34,27 +35,20 @@ public class ShowtimeResource {
         try {
             movieId = UUID.fromString(movieIdStr);
         } catch (IllegalArgumentException e) {
-            return Uni.createFrom().item(
-                    Response.status(Response.Status.BAD_REQUEST)
-                            .entity("{\"error\":\"Invalid movie ID format. Must be a valid UUID.\"}")
-                            .build());
+            throw new IllegalArgumentException("Invalid movie ID format. Must be a valid UUID.");
         }
 
         LocalDate date;
         if (dateStr == null || dateStr.isBlank()) {
-            date = LocalDate.now();
+            date = LocalDate.now(ZoneOffset.UTC);
         } else {
             try {
-                date = LocalDate.parse(dateStr);
+                date = LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE);
             } catch (DateTimeException e) {
-                return Uni.createFrom().item(
-                        Response.status(Response.Status.BAD_REQUEST)
-                                .entity("{\"error\":\"Invalid date format. Use ISO-8601 format (YYYY-MM-DD).\"}")
-                                .build());
+                throw new IllegalArgumentException("Invalid date format. Use ISO-8601 format (YYYY-MM-DD).");
             }
         }
 
-        return showtimeService.getShowtimesByMovieAndDate(movieId, date)
-                .map(showtimes -> Response.ok(showtimes).build());
+        return showtimeService.getShowtimesByMovieAndDate(movieId, date);
     }
 }

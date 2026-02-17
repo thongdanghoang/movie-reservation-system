@@ -1,5 +1,6 @@
 package com.atomicbunker.reservation.resource;
 
+import com.atomicbunker.reservation.dto.MovieDTO;
 import com.atomicbunker.reservation.service.MovieService;
 import io.quarkus.hibernate.reactive.panache.common.WithSession;
 import io.smallrye.mutiny.Uni;
@@ -9,7 +10,6 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.util.UUID;
 
 @Path("/api/v1/movies")
@@ -22,21 +22,18 @@ public class MovieResource {
     @GET
     @Path("/now-playing")
     @WithSession
-    public Uni<Response> getNowPlaying() {
+    public Uni<MovieDTO[]> getNowPlaying() {
         return movieService.getNowPlaying()
-                .map(movies -> Response.ok(movies).build());
+                .map(movies -> movies.stream()
+                        .map(MovieDTO::from)
+                        .toArray(MovieDTO[]::new));
     }
 
     @GET
     @Path("/{id}")
     @WithSession
-    public Uni<Response> getMovie(@PathParam("id") UUID id) {
+    public Uni<MovieDTO> getMovie(@PathParam("id") UUID id) {
         return movieService.getMovie(id)
-                .map(movie -> {
-                    if (movie == null) {
-                        return Response.status(Response.Status.NOT_FOUND).build();
-                    }
-                    return Response.ok(movie).build();
-                });
+                .map(MovieDTO::from);
     }
 }

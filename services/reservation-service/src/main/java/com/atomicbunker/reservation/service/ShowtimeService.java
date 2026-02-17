@@ -22,26 +22,25 @@ public class ShowtimeService {
         Instant startOfDay = date.atStartOfDay().toInstant(ZoneOffset.UTC);
         Instant endOfDay = date.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC);
 
-        return showtimeRepository.findByMovieAndDateRange(movieId, startOfDay, endOfDay)
-                .map(showtimes -> {
-                    // Filter out past showtimes if querying for today
-                    if (date.equals(LocalDate.now())) {
-                        Instant now = Instant.now();
-                        return showtimes.stream()
-                                .filter(s -> !s.startTime.isBefore(now))
-                                .toList();
-                    }
-                    return showtimes;
-                })
-                .map(showtimes -> showtimes.stream()
-                        .map(s -> new ShowtimeDTO(
-                                s.id,
-                                s.movie != null ? s.movie.id : null,
-                                s.movie != null ? s.movie.title : null,
-                                s.startTime,
-                                s.theaterName,
-                                s.availableSeats
-                        ))
-                        .toList());
+        boolean isToday = date.equals(LocalDate.now(ZoneOffset.UTC));
+        
+        Uni<List<Showtime>> showtimesUni;
+        if (isToday) {
+            Instant now = Instant.now();
+            showtimesUni = showtimeRepository.findByMovieAndDateRangeExcludingPast(movieId, startOfDay, endOfDay, now);
+        } else {
+            showtimesUni = showtimeRepository.findByMovieAndDateRange(movieId, startOfDay, endOfDay);
+        }
+
+        return showtimesUni.map(showtimes -> showtimes.stream()
+                .map(s -> new ShowtimeDTO(
+                        s.id,
+                        s.movie != null ? s.movie.id : null,
+                        s.movie != null ? s.movie.title : null,
+                        s.startTime,
+                        s.theaterName,
+                        s.availableSeats
+                ))
+                .toList());
     }
 }

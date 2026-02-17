@@ -7,10 +7,10 @@ import jakarta.ws.rs.ext.Provider;
 import java.util.Map;
 
 @Provider
-public class NotFoundExceptionMapper implements ExceptionMapper<NotFoundException> {
+public class IllegalArgumentExceptionMapper implements ExceptionMapper<IllegalArgumentException> {
     @Override
-    public Response toResponse(NotFoundException exception) {
-        return Response.status(Response.Status.NOT_FOUND)
+    public Response toResponse(IllegalArgumentException exception) {
+        return Response.status(Response.Status.BAD_REQUEST)
                 .type(MediaType.APPLICATION_JSON)
                 .entity(Map.of("error", exception.getMessage()))
                 .build();

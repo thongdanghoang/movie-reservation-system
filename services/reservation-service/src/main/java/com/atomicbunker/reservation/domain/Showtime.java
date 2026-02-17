@@ -10,6 +10,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -21,16 +24,21 @@ public class Showtime extends PanacheEntityBase {
     @GeneratedValue(strategy = GenerationType.UUID)
     public UUID id;
 
+    @NotNull(message = "Movie is required")
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "movie_id")
+    @JoinColumn(name = "movie_id", nullable = false)
     public Movie movie;
 
-    @Column(name = "start_time")
+    @NotNull(message = "Start time is required")
+    @Column(name = "start_time", nullable = false)
     public Instant startTime;
 
-    @Column(name = "theater_name")
+    @NotBlank(message = "Theater name is required")
+    @Column(name = "theater_name", nullable = false)
     public String theaterName;
 
-    @Column(name = "available_seats")
+    @NotNull(message = "Available seats is required")
+    @Min(value = 0, message = "Available seats must be non-negative")
+    @Column(name = "available_seats", nullable = false)
     public Integer availableSeats;
 }

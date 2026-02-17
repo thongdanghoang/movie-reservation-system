@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { ApiError } from '@/lib/api';
 
 interface ErrorProps {
     error: Error & { digest?: string };
@@ -12,7 +13,7 @@ export default function Error({ error, reset }: ErrorProps) {
         console.error('Movie page error:', error);
     }, [error]);
 
-    const isNotFound = error.message.includes('404') || error.message.includes('not found');
+    const isNotFound = error instanceof ApiError && error.status === 404;
 
     return (
         <div className="container mx-auto px-4 py-16 text-center">
