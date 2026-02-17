@@ -24,7 +24,7 @@
       "url": "https://api.githubcopilot.com/mcp/",
       "enabled": true,
       "headers": {
-        "Authorization": "Bearer changeme"
+        "Authorization": "Bearer ${GITHUB_TOKEN}"
       }
     }
   }

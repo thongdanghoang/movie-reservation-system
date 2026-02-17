@@ -1,4 +1,4 @@
-import { Movie, Showtime } from '@/shared/types';
+import { Movie, Showtime, Seat } from '@/shared/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -53,6 +53,24 @@ export async function getShowtimes(movieId: string, date?: string): Promise<Show
 
     if (!response.ok) {
         throw new ApiError(response.status, `Failed to fetch showtimes: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+export async function getSeats(showtimeId: string): Promise<Seat[]> {
+    const response = await fetch(`${API_BASE_URL}/api/v1/showtimes/${encodeURIComponent(showtimeId)}/seats`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        if (response.status === 404) {
+            throw new ApiError(404, `Showtime not found`);
+        }
+        throw new ApiError(response.status, `Failed to fetch seats: ${response.statusText}`);
     }
 
     return response.json();

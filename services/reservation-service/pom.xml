@@ -66,6 +66,11 @@
             <artifactId>quarkus-reactive-pg-client</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-websockets</artifactId>
+        </dependency>
+
         <!-- Flyway specific dependencies -->
         <dependency>
             <groupId>io.quarkus</groupId>
