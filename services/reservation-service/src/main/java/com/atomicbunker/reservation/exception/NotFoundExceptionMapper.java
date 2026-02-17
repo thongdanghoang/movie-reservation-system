@@ -10,9 +10,10 @@ import java.util.Map;
 public class NotFoundExceptionMapper implements ExceptionMapper<NotFoundException> {
     @Override
     public Response toResponse(NotFoundException exception) {
+        String message = exception.getMessage() != null ? exception.getMessage() : "Resource not found";
         return Response.status(Response.Status.NOT_FOUND)
                 .type(MediaType.APPLICATION_JSON)
-                .entity(Map.of("error", exception.getMessage()))
+                .entity(Map.of("error", message))
                 .build();
     }
 }

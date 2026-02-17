@@ -19,14 +19,13 @@ public class ShowtimeService {
     ShowtimeRepository showtimeRepository;
 
     public Uni<List<ShowtimeDTO>> getShowtimesByMovieAndDate(UUID movieId, LocalDate date) {
-        Instant startOfDay = date.atStartOfDay().toInstant(ZoneOffset.UTC);
-        Instant endOfDay = date.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC);
+        var startOfDay = date.atStartOfDay().toInstant(ZoneOffset.UTC);
+        var endOfDay = date.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC);
+        var isToday = date.equals(LocalDate.now(ZoneOffset.UTC));
 
-        boolean isToday = date.equals(LocalDate.now(ZoneOffset.UTC));
-        
         Uni<List<Showtime>> showtimesUni;
         if (isToday) {
-            Instant now = Instant.now();
+            var now = Instant.now();
             showtimesUni = showtimeRepository.findByMovieAndDateRangeExcludingPast(movieId, startOfDay, endOfDay, now);
         } else {
             showtimesUni = showtimeRepository.findByMovieAndDateRange(movieId, startOfDay, endOfDay);

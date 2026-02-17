@@ -1,6 +1,7 @@
 package com.atomicbunker.reservation.resource;
 
 import com.atomicbunker.reservation.dto.ShowtimeDTO;
+import com.atomicbunker.reservation.exception.BadRequestException;
 import com.atomicbunker.reservation.service.ShowtimeService;
 import io.quarkus.hibernate.reactive.panache.common.WithSession;
 import io.smallrye.mutiny.Uni;
@@ -35,7 +36,7 @@ public class ShowtimeResource {
         try {
             movieId = UUID.fromString(movieIdStr);
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid movie ID format. Must be a valid UUID.");
+            throw new BadRequestException("Invalid movie ID format. Must be a valid UUID.");
         }
 
         LocalDate date;
@@ -45,7 +46,7 @@ public class ShowtimeResource {
             try {
                 date = LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE);
             } catch (DateTimeException e) {
-                throw new IllegalArgumentException("Invalid date format. Use ISO-8601 format (YYYY-MM-DD).");
+                throw new BadRequestException("Invalid date format. Use ISO-8601 format (YYYY-MM-DD).");
             }
         }
 

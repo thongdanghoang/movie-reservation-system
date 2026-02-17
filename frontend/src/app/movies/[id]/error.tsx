@@ -1,30 +1,23 @@
 'use client';
 
 import { useEffect } from 'react';
-import { ApiError } from '@/lib/api';
 
 interface ErrorProps {
     error: Error & { digest?: string };
     reset: () => void;
 }
 
-export default function Error({ error, reset }: ErrorProps) {
+export default function MovieErrorPage({ error, reset }: ErrorProps) {
     useEffect(() => {
         console.error('Movie page error:', error);
     }, [error]);
 
-    const isNotFound = error instanceof ApiError && error.status === 404;
-
     return (
         <div className="container mx-auto px-4 py-16 text-center">
             <div className="max-w-md mx-auto">
-                <h1 className="text-4xl font-bold text-gray-900 mb-4">
-                    {isNotFound ? 'Movie Not Found' : 'Something Went Wrong'}
-                </h1>
+                <h1 className="text-4xl font-bold text-gray-900 mb-4">Something Went Wrong</h1>
                 <p className="text-gray-600 mb-8">
-                    {isNotFound
-                        ? 'The movie you are looking for does not exist or is no longer available.'
-                        : 'An error occurred while loading the movie. Please try again.'}
+                    An error occurred while loading the movie. Please try again.
                 </p>
                 <button
                     onClick={reset}

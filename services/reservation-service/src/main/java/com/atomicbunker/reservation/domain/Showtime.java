@@ -10,9 +10,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -38,7 +38,7 @@ public class Showtime extends PanacheEntityBase {
     public String theaterName;
 
     @NotNull(message = "Available seats is required")
-    @Min(value = 0, message = "Available seats must be non-negative")
+    @PositiveOrZero(message = "Available seats must be non-negative")
     @Column(name = "available_seats", nullable = false)
     public Integer availableSeats;
 }

@@ -7,12 +7,13 @@ import jakarta.ws.rs.ext.Provider;
 import java.util.Map;
 
 @Provider
-public class IllegalArgumentExceptionMapper implements ExceptionMapper<IllegalArgumentException> {
+public class BadRequestExceptionMapper implements ExceptionMapper<BadRequestException> {
     @Override
-    public Response toResponse(IllegalArgumentException exception) {
+    public Response toResponse(BadRequestException exception) {
+        String message = exception.getMessage() != null ? exception.getMessage() : "Bad request";
         return Response.status(Response.Status.BAD_REQUEST)
                 .type(MediaType.APPLICATION_JSON)
-                .entity(Map.of("error", exception.getMessage()))
+                .entity(Map.of("error", message))
                 .build();
     }
 }

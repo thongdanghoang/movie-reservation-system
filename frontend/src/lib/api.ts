@@ -25,7 +25,7 @@ export async function getNowPlayingMovies(): Promise<Movie[]> {
 }
 
 export async function getMovie(movieId: string): Promise<Movie> {
-    const response = await fetch(`${API_BASE_URL}/api/v1/movies/${movieId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/v1/movies/${encodeURIComponent(movieId)}`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
@@ -43,8 +43,8 @@ export async function getMovie(movieId: string): Promise<Movie> {
 }
 
 export async function getShowtimes(movieId: string, date?: string): Promise<Showtime[]> {
-    const dateParam = date ? `?date=${date}` : '';
-    const response = await fetch(`${API_BASE_URL}/api/v1/movies/${movieId}/showtimes${dateParam}`, {
+    const dateParam = date ? `?date=${encodeURIComponent(date)}` : '';
+    const response = await fetch(`${API_BASE_URL}/api/v1/movies/${encodeURIComponent(movieId)}/showtimes${dateParam}`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
