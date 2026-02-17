@@ -17,3 +17,26 @@ export interface Showtime {
 export interface MoviesResponse {
     movies: Movie[];
 }
+
+export type SeatStatus = 'AVAILABLE' | 'HELD' | 'SOLD';
+
+export interface Seat {
+    id: string;
+    seatRow: string;
+    seatColumn: number;
+    status: SeatStatus;
+}
+
+export interface SeatUpdate {
+    seatId: string;
+    seatRow: string;
+    seatColumn: number;
+    status: SeatStatus;
+}
+
+export interface ShowtimeDetails {
+    id: string;
+    movieTitle: string;
+    startTime: string;
+    theaterName: string;
+}

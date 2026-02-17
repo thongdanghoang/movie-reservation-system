@@ -42,4 +42,8 @@ public class ShowtimeService {
                 ))
                 .toList());
     }
+
+    public Uni<Showtime> findById(UUID showtimeId) {
+        return showtimeRepository.findById(showtimeId);
+    }
 }
