@@ -1,15 +1,15 @@
 {
-  name: "Default",
-  image: "ubuntu:latest",
-  customizations: {
+  "name": "Default",
+  "image": "ubuntu:latest",
+  "customizations": {
     // Configure JetBrains IDE-specific properties
-    jetbrains: {
-      backend: "IntelliJ",
-      settings: {
+    "jetbrains": {
+      "backend": "IntelliJ",
+      "settings": {
         // IDE settings can be added via “Show context actions”|“Add currently modified settings from IDE”.
         // A complete list of supported settings is also available through auto-completion
       },
-      plugins: [
+      "plugins": [
         // "com.intellij.ml.llm",
         "dev.sweep.assistant.cloud",
         "com.mallowigi",
@@ -23,7 +23,7 @@
       ]
     }
   },
-  features: {
+  "features": {
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
     "ghcr.io/devcontainers/features/git:1": {
       "ppa": false,
@@ -35,5 +35,5 @@
   },
   "postCreateCommand": "npm i -g opencode-ai",
   // Comment out to connect as the root user.
-  remoteUser: "ubuntu"
+  "remoteUser": "ubuntu"
 }
