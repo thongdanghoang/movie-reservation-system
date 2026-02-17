@@ -11,6 +11,7 @@ import java.util.UUID;
 public class ShowtimeRepository implements PanacheRepositoryBase<Showtime, UUID> {
 
     public Uni<List<Showtime>> findByMovieAndDateRange(UUID movieId, Instant startOfDay, Instant endOfDay) {
-        return list("movie.id = ?1 and startTime >= ?2 and startTime < ?3", movieId, startOfDay, endOfDay);
+        return list("select s from Showtime s left join fetch s.movie where s.movie.id = ?1 and s.startTime >= ?2 and s.startTime < ?3", 
+                    movieId, startOfDay, endOfDay);
     }
 }

@@ -1,5 +1,6 @@
 package com.atomicbunker.reservation.resource;
 
+import com.atomicbunker.reservation.dto.ShowtimeDTO;
 import com.atomicbunker.reservation.service.ShowtimeService;
 import io.quarkus.hibernate.reactive.panache.common.WithSession;
 import io.smallrye.mutiny.Uni;
@@ -13,6 +14,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.time.DateTimeException;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @Path("/api/v1/movies/{movieId}/showtimes")

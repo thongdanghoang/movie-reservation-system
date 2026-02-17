@@ -2,6 +2,7 @@ package com.atomicbunker.reservation.service;
 
 import com.atomicbunker.reservation.domain.Showtime;
 import com.atomicbunker.reservation.domain.ShowtimeRepository;
+import com.atomicbunker.reservation.dto.ShowtimeDTO;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -17,7 +18,7 @@ public class ShowtimeService {
     @Inject
     ShowtimeRepository showtimeRepository;
 
-    public Uni<List<Showtime>> getShowtimesByMovieAndDate(UUID movieId, LocalDate date) {
+    public Uni<List<ShowtimeDTO>> getShowtimesByMovieAndDate(UUID movieId, LocalDate date) {
         Instant startOfDay = date.atStartOfDay().toInstant(ZoneOffset.UTC);
         Instant endOfDay = date.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC);
 
@@ -31,6 +32,16 @@ public class ShowtimeService {
                                 .toList();
                     }
                     return showtimes;
-                });
+                })
+                .map(showtimes -> showtimes.stream()
+                        .map(s -> new ShowtimeDTO(
+                                s.id,
+                                s.movie != null ? s.movie.id : null,
+                                s.movie != null ? s.movie.title : null,
+                                s.startTime,
+                                s.theaterName,
+                                s.availableSeats
+                        ))
+                        .toList());
     }
 }
