@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useSeatStore } from '@/stores/seatStore';
 import type { Seat, SeatStatus } from '@/shared/types';
 
@@ -25,12 +25,36 @@ interface SeatMapProps {
 export function SeatMap({ onSeatClick }: SeatMapProps) {
     const { seats, selectedSeats } = useSeatStore();
     const svgRef = useRef<SVGSVGElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
     const [viewBox, setViewBox] = useState({ x: 0, y: 0, width: 800, height: 600 });
     const [isPanning, setIsPanning] = useState(false);
     const [startPoint, setStartPoint] = useState({ x: 0, y: 0 });
 
     const rows = [...new Set(seats.map((s) => s.seatRow))].sort();
     const columns = [...new Set(seats.map((s) => s.seatColumn))].sort((a, b) => a - b);
+
+    const svgWidth = columns.length * (SEAT_SIZE + SEAT_GAP) + 100;
+    const svgHeight = rows.length * (SEAT_SIZE + SEAT_GAP) + 100;
+
+    useEffect(() => {
+        setViewBox({ x: 0, y: 0, width: svgWidth, height: svgHeight });
+    }, [svgWidth, svgHeight]);
+
+    useEffect(() => {
+        if (containerRef.current) {
+            const updateSize = () => {
+                setContainerSize({
+                    width: containerRef.current?.clientWidth || 800,
+                    height: containerRef.current?.clientHeight || 600,
+                });
+            };
+            updateSize();
+            const resizeObserver = new ResizeObserver(updateSize);
+            resizeObserver.observe(containerRef.current);
+            return () => resizeObserver.disconnect();
+        }
+    }, []);
 
     const getSeatPosition = (row: string, column: number) => {
         const rowIndex = rows.indexOf(row);
@@ -60,8 +84,8 @@ export function SeatMap({ onSeatClick }: SeatMapProps) {
     const handleMouseMove = useCallback(
         (e: React.MouseEvent) => {
             if (isPanning) {
-                const dx = (e.clientX - startPoint.x) * (viewBox.width / 800);
-                const dy = (e.clientY - startPoint.y) * (viewBox.height / 600);
+                const dx = (e.clientX - startPoint.x) * (viewBox.width / containerSize.width);
+                const dy = (e.clientY - startPoint.y) * (viewBox.height / containerSize.height);
                 setViewBox((prev) => ({
                     ...prev,
                     x: prev.x - dx,
@@ -70,7 +94,7 @@ export function SeatMap({ onSeatClick }: SeatMapProps) {
                 setStartPoint({ x: e.clientX, y: e.clientY });
             }
         },
-        [isPanning, startPoint, viewBox.width, viewBox.height]
+        [isPanning, startPoint, viewBox.width, viewBox.height, containerSize]
     );
 
     const handleMouseUp = useCallback(() => {
@@ -86,8 +110,9 @@ export function SeatMap({ onSeatClick }: SeatMapProps) {
         [onSeatClick]
     );
 
-    const svgWidth = columns.length * (SEAT_SIZE + SEAT_GAP) + 100;
-    const svgHeight = rows.length * (SEAT_SIZE + SEAT_GAP) + 100;
+    const handleResetView = useCallback(() => {
+        setViewBox({ x: 0, y: 0, width: svgWidth, height: svgHeight });
+    }, [svgWidth, svgHeight]);
 
     return (
         <div className="flex flex-col gap-4">
@@ -105,20 +130,21 @@ export function SeatMap({ onSeatClick }: SeatMapProps) {
                     Zoom Out
                 </button>
                 <button
-                    onClick={() => setViewBox({ x: 0, y: 0, width: 800, height: 600 })}
+                    onClick={handleResetView}
                     className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm font-medium"
                 >
                     Reset View
                 </button>
             </div>
 
-            <div className="border rounded-lg overflow-hidden bg-gray-50">
+            <div ref={containerRef} className="border rounded-lg overflow-hidden bg-gray-50">
                 <svg
                     ref={svgRef}
                     viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
-                    width={Math.min(800, svgWidth)}
-                    height={Math.min(600, svgHeight)}
+                    width="100%"
+                    height="100%"
                     className="cursor-grab active:cursor-grabbing"
+                    style={{ minHeight: '400px' }}
                     onMouseDown={handleMouseDown}
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUp}
