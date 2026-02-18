@@ -40,3 +40,11 @@ export interface ShowtimeDetails {
     startTime: string;
     theaterName: string;
 }
+
+export interface HoldSeatResponse {
+    seatId: string;
+    status: SeatStatus;
+    heldAt: string;
+    holdExpiresAt: string;
+    reservationId: string;
+}

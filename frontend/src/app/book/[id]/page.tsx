@@ -1,11 +1,22 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { SeatMap } from '@/features/seatmap/components/SeatMap';
+import { HoldTimer } from '@/features/booking/components/HoldTimer';
 import { useSeatWebSocket } from '@/features/seatmap/hooks/useSeatWebSocket';
 import { useSeatStore } from '@/stores/seatStore';
-import { getSeats } from '@/lib/api';
+import { getSeats, holdSeat, SeatTakenError } from '@/lib/api';
 import type { Seat, ShowtimeDetails } from '@/shared/types';
+import { toast } from 'sonner';
+
+// Generate a session ID for this booking session
+const SESSION_ID = typeof window !== 'undefined' 
+    ? localStorage.getItem('booking_session_id') || crypto.randomUUID()
+    : crypto.randomUUID();
+
+if (typeof window !== 'undefined') {
+    localStorage.setItem('booking_session_id', SESSION_ID);
+}
 
 interface BookingPageProps {
     params: Promise<{ id: string }>;
@@ -17,8 +28,14 @@ export default function BookingPage({ params }: BookingPageProps) {
     const [error, setError] = useState<string | null>(null);
     
     const setSeats = useSeatStore((state) => state.setSeats);
+    const updateSeatStatus = useSeatStore((state) => state.updateSeatStatus);
     const selectedSeats = useSeatStore((state) => state.selectedSeats);
     const seats = useSeatStore((state) => state.seats);
+    const heldSeat = useSeatStore((state) => state.heldSeat);
+    const isHolding = useSeatStore((state) => state.isHolding);
+    const setHeldSeat = useSeatStore((state) => state.setHeldSeat);
+    const setIsHolding = useSeatStore((state) => state.setIsHolding);
+    const clearHold = useSeatStore((state) => state.clearHold);
     
     useSeatWebSocket(showtimeId);
 
@@ -47,11 +64,65 @@ export default function BookingPage({ params }: BookingPageProps) {
         fetchSeats();
     }, [showtimeId, setSeats]);
 
-    const toggleSeatSelection = useSeatStore((state) => state.toggleSeatSelection);
+    const handleSeatClick = useCallback(async (seat: Seat) => {
+        // Only allow clicking AVAILABLE seats
+        if (seat.status !== 'AVAILABLE') {
+            if (seat.status === 'HELD') {
+                toast.info('Seat already held', {
+                    description: 'This seat is being held by another user. Try another seat.'
+                });
+            } else if (seat.status === 'SOLD') {
+                toast.info('Seat sold', {
+                    description: 'This seat has already been sold. Try another seat.'
+                });
+            }
+            return;
+        }
 
-    const handleSeatClick = (seat: Seat) => {
-        toggleSeatSelection(seat.id);
-    };
+        // If we already have a held seat, release it first
+        if (heldSeat) {
+            clearHold();
+        }
+
+        setIsHolding(true);
+        
+        try {
+            const response = await holdSeat(seat.id, SESSION_ID);
+            
+            // Success - update local state
+            updateSeatStatus(seat.id, 'HELD');
+            setHeldSeat(response);
+            
+            toast.success('Seat held!', {
+                description: 'You have 5 minutes to complete your booking.'
+            });
+        } catch (error) {
+            if (error instanceof SeatTakenError) {
+                toast.error('Seat Taken', {
+                    description: 'Someone else just grabbed this seat. Try another one!'
+                });
+                // Refresh seat map to get latest status
+                const seatsData = await getSeats(showtimeId!);
+                setSeats(seatsData);
+            } else {
+                toast.error('Error', {
+                    description: error instanceof Error ? error.message : 'Failed to hold seat'
+                });
+            }
+        } finally {
+            setIsHolding(false);
+        }
+    }, [heldSeat, showtimeId, updateSeatStatus, setHeldSeat, setIsHolding, setSeats, clearHold]);
+
+    const handleHoldExpire = useCallback(() => {
+        if (heldSeat) {
+            updateSeatStatus(heldSeat.seatId, 'AVAILABLE');
+            clearHold();
+            toast.warning('Hold expired', {
+                description: 'Your seat hold has expired. Please select a new seat.'
+            });
+        }
+    }, [heldSeat, updateSeatStatus, clearHold]);
 
     if (loading) {
         return (
@@ -142,6 +213,24 @@ export default function BookingPage({ params }: BookingPageProps) {
                     )}
                 </p>
             </div>
+
+            {isHolding && (
+                <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-yellow-800 flex items-center gap-2">
+                        <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-600"></span>
+                        Holding seat...
+                    </p>
+                </div>
+            )}
+
+            {heldSeat && (
+                <div className="mb-4">
+                    <HoldTimer 
+                        expiresAt={new Date(heldSeat.holdExpiresAt)} 
+                        onExpire={handleHoldExpire}
+                    />
+                </div>
+            )}
 
             {selectedSeats.length > 0 && (
                 <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">

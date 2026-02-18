@@ -1,4 +1,4 @@
-import { Movie, Showtime, Seat } from '@/shared/types';
+import { Movie, Showtime, Seat, HoldSeatResponse } from '@/shared/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -71,6 +71,40 @@ export async function getSeats(showtimeId: string): Promise<Seat[]> {
             throw new ApiError(404, `Showtime not found`);
         }
         throw new ApiError(response.status, `Failed to fetch seats: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+export class SeatTakenError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'SeatTakenError';
+    }
+}
+
+export async function holdSeat(seatId: string, sessionId: string): Promise<HoldSeatResponse> {
+    const response = await fetch(`${API_BASE_URL}/api/v1/seats/${encodeURIComponent(seatId)}/hold`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ sessionId }),
+    });
+
+    if (response.status === 409) {
+        let message = 'Seat is no longer available';
+        try {
+            const error = await response.json();
+            message = error.message || message;
+        } catch {
+            // Non-JSON 409 response — use default message
+        }
+        throw new SeatTakenError(message);
+    }
+
+    if (!response.ok) {
+        throw new ApiError(response.status, `Failed to hold seat: ${response.statusText}`);
     }
 
     return response.json();
