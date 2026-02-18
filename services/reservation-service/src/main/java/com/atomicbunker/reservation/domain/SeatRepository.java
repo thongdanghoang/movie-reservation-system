@@ -26,7 +26,6 @@ public class SeatRepository implements PanacheRepositoryBase<Seat, UUID> {
     public Uni<Seat> findByIdWithLock(UUID seatId) {
         return find("id", seatId)
             .withLock(LockModeType.PESSIMISTIC_WRITE)
-            .withHint("jakarta.persistence.lock.timeout", 0)
             .firstResult();
     }
 
