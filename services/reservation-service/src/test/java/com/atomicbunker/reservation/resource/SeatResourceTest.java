@@ -13,11 +13,11 @@ public class SeatResourceTest {
 
     @Test
     public void testGetSeatsWithInvalidUuid() {
+        // With native UUID type, invalid UUID format results in 404 (route doesn't match)
         given()
                 .when().get("/api/v1/showtimes/invalid-uuid/seats")
                 .then()
-                .statusCode(400)
-                .body("error", containsString("Invalid showtime ID format"));
+                .statusCode(404);
     }
 
     @Test
