@@ -32,7 +32,7 @@ public class SeatHoldResource {
             @PathParam("seatId") UUID seatId,
             @Valid HoldSeatRequest request) {
         
-        return seatHoldService.holdSeat(seatId, request.getSessionId())
+        return seatHoldService.holdSeat(seatId, request.sessionId())
             .map(response -> Response.ok(response).build())
             .onFailure(SeatAlreadyTakenException.class)
             .recoverWithItem(ex -> Response.status(Response.Status.CONFLICT)

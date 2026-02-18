@@ -93,8 +93,14 @@ export async function holdSeat(seatId: string, sessionId: string): Promise<HoldS
     });
 
     if (response.status === 409) {
-        const error = await response.json();
-        throw new SeatTakenError(error.message || 'Seat is no longer available');
+        let message = 'Seat is no longer available';
+        try {
+            const error = await response.json();
+            message = error.message || message;
+        } catch {
+            // Non-JSON 409 response — use default message
+        }
+        throw new SeatTakenError(message);
     }
 
     if (!response.ok) {

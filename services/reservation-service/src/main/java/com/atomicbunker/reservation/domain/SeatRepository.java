@@ -4,9 +4,7 @@ import io.quarkus.hibernate.reactive.panache.PanacheRepositoryBase;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.LockModeType;
-import org.hibernate.jpa.SpecHints;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -26,17 +24,10 @@ public class SeatRepository implements PanacheRepositoryBase<Seat, UUID> {
      * Fails immediately if seat is already locked.
      */
     public Uni<Seat> findByIdWithLock(UUID seatId) {
-        return getSession()
-            .chain(session -> {
-                return session.find(Seat.class, seatId)
-                    .chain(seat -> {
-                        if (seat == null) {
-                            return Uni.createFrom().nullItem();
-                        }
-                        return session.lock(seat, LockModeType.PESSIMISTIC_WRITE)
-                            .map(v -> seat);
-                    });
-            });
+        return find("id", seatId)
+            .withLock(LockModeType.PESSIMISTIC_WRITE)
+            .withHint("jakarta.persistence.lock.timeout", 0)
+            .firstResult();
     }
 
     /**

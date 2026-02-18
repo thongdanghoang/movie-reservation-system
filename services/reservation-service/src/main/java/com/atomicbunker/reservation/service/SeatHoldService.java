@@ -40,12 +40,19 @@ public class SeatHoldService {
                         new jakarta.ws.rs.NotFoundException("Seat not found"));
                 }
                 
-                // Check if already held or sold
-                if (seat.getStatus() != SeatStatus.AVAILABLE) {
-                    log.warn("Seat {} is not available (status: {})", seatId, seat.getStatus());
+                // Check if sold or held (and not expired)
+                if (seat.getStatus() == SeatStatus.SOLD) {
+                    log.warn("Seat {} is already sold", seatId);
                     return Uni.createFrom().failure(
-                        new SeatAlreadyTakenException("Seat is no longer available"));
+                        new SeatAlreadyTakenException("Seat has been sold"));
                 }
+                if (seat.getStatus() == SeatStatus.HELD && !seat.isHoldExpired()) {
+                    log.warn("Seat {} is held by another user (expires at {})", 
+                        seatId, seat.getHeldAt().plus(5, ChronoUnit.MINUTES));
+                    return Uni.createFrom().failure(
+                        new SeatAlreadyTakenException("Seat is being held by another user"));
+                }
+                // If status is HELD but expired, we can reclaim it - continue with hold
                 
                 // Hold the seat
                 UUID reservationId = UUID.randomUUID();
