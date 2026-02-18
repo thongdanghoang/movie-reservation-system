@@ -15,32 +15,38 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import java.util.UUID;
 
 @Entity
 @Table(name = "seats")
+@Getter
+@Setter
+@NoArgsConstructor
 public class Seat extends PanacheEntityBase {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    public UUID id;
+    private UUID id;
 
     @NotNull(message = "Showtime is required")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "showtime_id", nullable = false)
-    public Showtime showtime;
+    private Showtime showtime;
 
     @NotBlank(message = "Seat row is required")
     @Column(name = "seat_row", nullable = false)
-    public String seatRow;
+    private String seatRow;
 
     @NotNull(message = "Seat column is required")
     @Positive(message = "Seat column must be positive")
     @Column(name = "seat_column", nullable = false)
-    public Integer seatColumn;
+    private Integer seatColumn;
 
     @NotNull(message = "Seat status is required")
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    public SeatStatus status = SeatStatus.AVAILABLE;
+    private SeatStatus status = SeatStatus.AVAILABLE;
 }

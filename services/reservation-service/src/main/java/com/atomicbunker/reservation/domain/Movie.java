@@ -9,28 +9,29 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import java.util.UUID;
 
 @Entity
 @Table(name = "movies")
+@Getter
+@Setter
+@NoArgsConstructor
 public class Movie extends PanacheEntityBase {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    public UUID id;
+    private UUID id;
 
-    public String title;
+    private String title;
 
     @Column(name = "poster_url")
-    public String posterUrl;
+    private String posterUrl;
 
-    public String genre;
+    private String genre;
 
     @Enumerated(EnumType.STRING)
-    public Status status;
-
-    public enum Status {
-        NOW_PLAYING,
-        COMING_SOON
-    }
+    private MovieStatus status;
 }

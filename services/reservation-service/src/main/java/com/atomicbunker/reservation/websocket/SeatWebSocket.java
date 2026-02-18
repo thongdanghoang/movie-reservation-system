@@ -9,17 +9,15 @@ import jakarta.websocket.OnOpen;
 import jakarta.websocket.Session;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
-import org.jboss.logging.Logger;
+import lombok.extern.slf4j.Slf4j;
 
-import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j
 @ServerEndpoint("/ws/seats/{showtimeId}")
 public class SeatWebSocket {
-
-    private static final Logger LOG = Logger.getLogger(SeatWebSocket.class);
 
     private static final Map<String, Set<Session>> showtimeSessions = new ConcurrentHashMap<>();
 
@@ -29,7 +27,7 @@ public class SeatWebSocket {
     @OnOpen
     public void onOpen(Session session, @PathParam("showtimeId") String showtimeId) {
         showtimeSessions.computeIfAbsent(showtimeId, k -> ConcurrentHashMap.newKeySet()).add(session);
-        LOG.infof("WebSocket connected for showtime %s, session %s", showtimeId, session.getId());
+        log.info("WebSocket connected for showtime {}, session {}", showtimeId, session.getId());
     }
 
     @OnClose
@@ -41,17 +39,17 @@ public class SeatWebSocket {
                 showtimeSessions.remove(showtimeId);
             }
         }
-        LOG.infof("WebSocket disconnected for showtime %s, session %s", showtimeId, session.getId());
+        log.info("WebSocket disconnected for showtime {}, session {}", showtimeId, session.getId());
     }
 
     @OnError
     public void onError(Session session, Throwable throwable, @PathParam("showtimeId") String showtimeId) {
-        LOG.errorf(throwable, "WebSocket error for showtime %s, session %s", showtimeId, session.getId());
+        log.error("WebSocket error for showtime {}, session {}", showtimeId, session.getId(), throwable);
     }
 
     @OnMessage
     public void onMessage(String message, Session session, @PathParam("showtimeId") String showtimeId) {
-        LOG.debugf("Received message for showtime %s: %s", showtimeId, message);
+        log.debug("Received message for showtime {}: {}", showtimeId, message);
         // Client messages are not expected; server is the single source of truth
         // Seat updates should only come from the server-side business logic
     }
@@ -61,7 +59,7 @@ public class SeatWebSocket {
             String json = objectMapper.writeValueAsString(seatUpdate);
             broadcastToShowtime(showtimeId, json);
         } catch (Exception e) {
-            LOG.errorf(e, "Failed to serialize seat update for showtime %s", showtimeId);
+            log.error("Failed to serialize seat update for showtime {}", showtimeId, e);
         }
     }
 
