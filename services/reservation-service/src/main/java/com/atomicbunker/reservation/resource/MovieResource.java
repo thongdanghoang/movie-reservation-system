@@ -36,12 +36,12 @@ public class MovieResource {
     }
 
     private MovieDTO toDTO(Movie movie) {
-        MovieDTO dto = new MovieDTO();
-        dto.id = movie.id;
-        dto.title = movie.title;
-        dto.posterUrl = movie.posterUrl;
-        dto.genre = movie.genre;
-        dto.status = movie.status != null ? movie.status.name() : null;
-        return dto;
+        return new MovieDTO(
+                movie.getId(),
+                movie.getTitle(),
+                movie.getPosterUrl(),
+                movie.getGenre(),
+                movie.getStatus() != null ? movie.getStatus().name() : null
+        );
     }
 }

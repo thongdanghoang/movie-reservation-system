@@ -10,6 +10,6 @@ import java.util.UUID;
 public class MovieRepository implements PanacheRepositoryBase<Movie, UUID> {
 
     public Uni<List<Movie>> findNowPlaying() {
-        return list("status", Movie.Status.NOW_PLAYING);
+        return list("status", MovieStatus.NOW_PLAYING);
     }
 }

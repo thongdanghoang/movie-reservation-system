@@ -38,10 +38,10 @@ public class SeatResource {
 
     private SeatDTO toDTO(Seat seat) {
         return new SeatDTO(
-                seat.id.toString(),
-                seat.seatRow,
-                seat.seatColumn,
-                seat.status.name()
+                seat.getId().toString(),
+                seat.getSeatRow(),
+                seat.getSeatColumn(),
+                seat.getStatus().name()
         );
     }
 }

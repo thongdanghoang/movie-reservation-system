@@ -39,12 +39,12 @@ public class ShowtimeResource {
 
     private ShowtimeDTO toDTO(Showtime showtime) {
         return new ShowtimeDTO(
-                showtime.id,
-                showtime.movie != null ? showtime.movie.id : null,
-                showtime.movie != null ? showtime.movie.title : null,
-                showtime.startTime,
-                showtime.theaterName,
-                showtime.availableSeats
+                showtime.getId(),
+                showtime.getMovie() != null ? showtime.getMovie().getId() : null,
+                showtime.getMovie() != null ? showtime.getMovie().getTitle() : null,
+                showtime.getStartTime(),
+                showtime.getTheaterName(),
+                showtime.getAvailableSeats()
         );
     }
 }
