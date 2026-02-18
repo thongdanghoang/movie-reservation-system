@@ -1,0 +1,12 @@
+{
+  "version": "1.0.0",
+  "organization": "Community",
+  "date": "February 2026",
+  "abstract": "Comprehensive Java coding best practices guide, designed for AI agents and LLMs. Contains rules across 7 categories covering general programming, exception handling, resource management, design, transaction management, performance, and security. Each rule includes detailed explanations, real-world examples comparing bad vs. good implementations, and specific impact metrics to guide automated refactoring and code generation.",
+  "references": [
+    "https://docs.oracle.com/javase/specs/jls/se21/html/",
+    "https://effective-java.com/",
+    "https://www.oracle.com/java/technologies/javase/codeconventions-contents.html",
+    "https://google.github.io/styleguide/javaguide.html"
+  ]
+}
