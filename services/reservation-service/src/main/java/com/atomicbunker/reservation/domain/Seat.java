@@ -18,6 +18,8 @@ import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 @Entity
@@ -49,4 +51,18 @@ public class Seat extends PanacheEntityBase {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private SeatStatus status = SeatStatus.AVAILABLE;
+
+    @Column(name = "held_at")
+    private Instant heldAt;
+
+    @Column(name = "held_by")
+    private String heldBy;
+
+    @Column(name = "reservation_id")
+    private UUID reservationId;
+
+    public boolean isHoldExpired() {
+        if (heldAt == null) return false;
+        return Instant.now().isAfter(heldAt.plus(5, ChronoUnit.MINUTES));
+    }
 }

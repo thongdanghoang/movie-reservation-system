@@ -1,18 +1,28 @@
 import { create } from 'zustand';
-import type { Seat, SeatStatus } from '@/shared/types';
+import type { Seat, SeatStatus, HoldSeatResponse } from '@/shared/types';
 
 interface SeatStore {
     seats: Seat[];
     selectedSeats: string[];
+    heldSeat: HoldSeatResponse | null;
+    isHolding: boolean;
+    holdError: string | null;
     setSeats: (seats: Seat[]) => void;
     updateSeatStatus: (seatId: string, status: SeatStatus) => void;
     toggleSeatSelection: (seatId: string) => void;
     clearSelection: () => void;
+    setHeldSeat: (seat: HoldSeatResponse | null) => void;
+    setIsHolding: (isHolding: boolean) => void;
+    setHoldError: (error: string | null) => void;
+    clearHold: () => void;
 }
 
 export const useSeatStore = create<SeatStore>((set) => ({
     seats: [],
     selectedSeats: [],
+    heldSeat: null,
+    isHolding: false,
+    holdError: null,
 
     setSeats: (seats) => set({ seats }),
 
@@ -34,4 +44,12 @@ export const useSeatStore = create<SeatStore>((set) => ({
         }),
 
     clearSelection: () => set({ selectedSeats: [] }),
+
+    setHeldSeat: (heldSeat) => set({ heldSeat }),
+
+    setIsHolding: (isHolding) => set({ isHolding }),
+
+    setHoldError: (holdError) => set({ holdError }),
+
+    clearHold: () => set({ heldSeat: null, holdError: null, isHolding: false }),
 }));
