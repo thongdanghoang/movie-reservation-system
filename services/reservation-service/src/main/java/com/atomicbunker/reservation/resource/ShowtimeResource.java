@@ -1,7 +1,7 @@
 package com.atomicbunker.reservation.resource;
 
-import com.atomicbunker.reservation.domain.Showtime;
 import com.atomicbunker.reservation.dto.ShowtimeDTO;
+import com.atomicbunker.reservation.mapper.ShowtimeMapper;
 import com.atomicbunker.reservation.service.ShowtimeService;
 import io.smallrye.mutiny.Uni;
 import jakarta.validation.constraints.NotNull;
@@ -23,6 +23,7 @@ import java.util.UUID;
 public class ShowtimeResource {
 
     private final ShowtimeService showtimeService;
+    private final ShowtimeMapper showtimeMapper;
 
     @GET
     public Uni<List<ShowtimeDTO>> getShowtimes(
@@ -32,19 +33,6 @@ public class ShowtimeResource {
         LocalDate queryDate = date != null ? date : LocalDate.now(ZoneOffset.UTC);
 
         return showtimeService.getShowtimesByMovieAndDate(movieId, queryDate)
-                .map(showtimes -> showtimes.stream()
-                        .map(this::toDTO)
-                        .toList());
-    }
-
-    private ShowtimeDTO toDTO(Showtime showtime) {
-        return new ShowtimeDTO(
-                showtime.getId(),
-                showtime.getMovie() != null ? showtime.getMovie().getId() : null,
-                showtime.getMovie() != null ? showtime.getMovie().getTitle() : null,
-                showtime.getStartTime(),
-                showtime.getTheaterName(),
-                showtime.getAvailableSeats()
-        );
+                .map(showtimeMapper::toDTOList);
     }
 }

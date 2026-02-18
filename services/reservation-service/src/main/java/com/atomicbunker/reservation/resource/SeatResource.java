@@ -1,8 +1,8 @@
 package com.atomicbunker.reservation.resource;
 
-import com.atomicbunker.reservation.domain.Seat;
 import com.atomicbunker.reservation.dto.SeatDTO;
 import com.atomicbunker.reservation.exception.NotFoundException;
+import com.atomicbunker.reservation.mapper.SeatMapper;
 import com.atomicbunker.reservation.service.SeatService;
 import com.atomicbunker.reservation.service.ShowtimeService;
 import io.smallrye.mutiny.Uni;
@@ -23,6 +23,7 @@ public class SeatResource {
 
     private final SeatService seatService;
     private final ShowtimeService showtimeService;
+    private final SeatMapper seatMapper;
 
     @GET
     public Uni<List<SeatDTO>> getSeats(@PathParam("showtimeId") @NotNull UUID showtimeId) {
@@ -31,17 +32,6 @@ public class SeatResource {
                     Uni.createFrom().failure(new NotFoundException("Showtime not found with id: " + showtimeId))
                 )
                 .chain(showtime -> seatService.getSeatsByShowtime(showtimeId))
-                .map(seats -> seats != null ? seats.stream()
-                        .map(this::toDTO)
-                        .toList() : List.of());
-    }
-
-    private SeatDTO toDTO(Seat seat) {
-        return new SeatDTO(
-                seat.getId().toString(),
-                seat.getSeatRow(),
-                seat.getSeatColumn(),
-                seat.getStatus().name()
-        );
+                .map(seatMapper::toDTOList);
     }
 }
