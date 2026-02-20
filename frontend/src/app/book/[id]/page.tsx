@@ -6,7 +6,7 @@ import { HoldTimer } from '@/features/booking/components/HoldTimer';
 import { CheckoutForm } from '@/features/booking/components/CheckoutForm';
 import { useSeatWebSocket } from '@/features/seatmap/hooks/useSeatWebSocket';
 import { useSeatStore } from '@/stores/seatStore';
-import { getSeats, holdSeat, SeatTakenError } from '@/lib/api';
+import { getSeats, holdSeat, deleteSeatHold, SeatTakenError } from '@/lib/api';
 import type { Seat, ShowtimeDetails } from '@/shared/types';
 import { toast } from 'sonner';
 
@@ -125,10 +125,20 @@ export default function BookingPage({ params }: BookingPageProps) {
         }
     }, [heldSeat, updateSeatStatus, clearHold]);
 
-    const handleCancelHold = useCallback(() => {
+    const handleCancelHold = useCallback(async () => {
         if (heldSeat) {
-            updateSeatStatus(heldSeat.seatId, 'AVAILABLE');
-            clearHold();
+            try {
+                await deleteSeatHold(heldSeat.seatId);
+                updateSeatStatus(heldSeat.seatId, 'AVAILABLE');
+                clearHold();
+                toast.info('Hold cancelled', {
+                    description: 'Your seat hold has been released.'
+                });
+            } catch (error) {
+                toast.error('Error', {
+                    description: error instanceof Error ? error.message : 'Failed to release seat hold'
+                });
+            }
         }
     }, [heldSeat, updateSeatStatus, clearHold]);
 

@@ -109,3 +109,16 @@ export async function holdSeat(seatId: string, sessionId: string): Promise<HoldS
 
     return response.json();
 }
+
+export async function deleteSeatHold(seatId: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/api/v1/seats/${encodeURIComponent(seatId)}/hold`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        throw new ApiError(response.status, `Failed to release seat hold: ${response.statusText}`);
+    }
+}

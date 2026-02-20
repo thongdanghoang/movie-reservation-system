@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSeatStore } from '@/stores/seatStore';
 
 interface CheckoutFormProps {
@@ -12,6 +12,19 @@ export function CheckoutForm({ onCancel }: CheckoutFormProps) {
 
     const heldSeat = useSeatStore((state) => state.heldSeat);
 
+    useEffect(() => {
+        if (!isSubmitting) return;
+
+        // Simulate submission (will be implemented in Story 2.3)
+        const timerId = setTimeout(() => {
+            setIsSubmitting(false);
+            console.log('Submitted booking for reservation:', heldSeat?.reservationId, '[REDACTED]', '[REDACTED]');
+            // TODO(Story 2.3): transition to payment processing
+        }, 500);
+
+        return () => clearTimeout(timerId);
+    }, [isSubmitting, heldSeat?.reservationId]);
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -20,13 +33,6 @@ export function CheckoutForm({ onCancel }: CheckoutFormProps) {
         // Basic frontend validation is handled by HTML5 attributes
         // but we can add more specific rules here if needed
         setIsSubmitting(true);
-
-        // Simulate submission (will be implemented in Story 2.3)
-        setTimeout(() => {
-            setIsSubmitting(false);
-            console.log('Submitted booking for reservation:', heldSeat.reservationId, 'Email:', email, 'Phone:', phone);
-            // We would transition to payment processing here
-        }, 500);
     };
 
     if (!heldSeat) {
