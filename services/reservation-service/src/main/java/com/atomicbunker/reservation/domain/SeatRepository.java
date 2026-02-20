@@ -57,8 +57,6 @@ public class SeatRepository implements PanacheRepositoryBase<Seat, UUID> {
                         "FROM Seat WHERE reservationId = :rid", Seat.class)
                         .setParameter("rid", reservationId)
                         .setLockMode(LockModeType.PESSIMISTIC_WRITE)
-                        // NOWAIT: fail immediately rather than blocking the event loop
-                        .setHint("jakarta.persistence.lock.timeout", 0)
                         .getSingleResultOrNull());
     }
 }
