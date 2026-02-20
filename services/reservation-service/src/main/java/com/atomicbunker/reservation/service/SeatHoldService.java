@@ -107,4 +107,53 @@ public class SeatHoldService {
             .reservationId(seat.getReservationId())
             .build();
     }
+
+    @WithTransaction
+    public Uni<Void> releaseSeatHold(UUID seatId) {
+        log.info("Attempting to release hold for seat {}", seatId);
+        
+        return seatRepository.findByIdWithLock(seatId)
+            .chain(seat -> {
+                if (seat == null) {
+                    log.warn("Seat {} not found", seatId);
+                    return Uni.createFrom().failure(
+                        new jakarta.ws.rs.NotFoundException("Seat not found"));
+                }
+                
+                if (seat.getStatus() != SeatStatus.HELD) {
+                    log.info("Seat {} is not held, nothing to release", seatId);
+                    return Uni.createFrom().nullItem();
+                }
+                
+                seat.setStatus(SeatStatus.AVAILABLE);
+                seat.setHeldAt(null);
+                seat.setHeldBy(null);
+                seat.setReservationId(null);
+                
+                log.info("Seat {} hold released successfully", seatId);
+                
+                return seatRepository.persist(seat)
+                    .chain(updatedSeat -> {
+                        broadcastSeatHoldReleased(updatedSeat);
+                        return Uni.createFrom().nullItem();
+                    });
+            })
+            .replaceWithVoid();
+    }
+
+    private void broadcastSeatHoldReleased(Seat seat) {
+        try {
+            ObjectNode message = objectMapper.createObjectNode();
+            message.put("type", "SEAT_RELEASED");
+            message.put("seatId", seat.getId().toString());
+            message.put("status", seat.getStatus().name());
+            
+            seatWebSocket.broadcastSeatUpdate(
+                seat.getShowtime().getId().toString(), 
+                message
+            );
+        } catch (Exception e) {
+            log.error("Failed to broadcast seat hold release for seat {}", seat.getId(), e);
+        }
+    }
 }
