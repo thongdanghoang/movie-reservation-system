@@ -7,7 +7,7 @@ import { CheckoutForm } from '@/features/booking/components/CheckoutForm';
 import { useSeatWebSocket } from '@/features/seatmap/hooks/useSeatWebSocket';
 import { useSeatStore } from '@/stores/seatStore';
 import { getSeats, holdSeat, deleteSeatHold, SeatTakenError } from '@/lib/api';
-import type { Seat, ShowtimeDetails } from '@/shared/types';
+import type { Seat } from '@/shared/types';
 import { toast } from 'sonner';
 
 // Generate a session ID for this booking session

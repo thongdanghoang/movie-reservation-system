@@ -9,17 +9,22 @@ interface MoviePageProps {
 export default async function MoviePage({ params }: MoviePageProps) {
     const { id } = await params;
 
+    let movie;
+    let showtimes;
+
     try {
-        const [movie, showtimes] = await Promise.all([
+        const [m, s] = await Promise.all([
             getMovie(id),
             getShowtimes(id),
         ]);
-
-        return <MovieDetail movie={movie} showtimes={showtimes} />;
+        movie = m;
+        showtimes = s;
     } catch (error) {
         if (error instanceof Error && 'status' in error && (error as { status: number }).status === 404) {
             notFound();
         }
         throw error;
     }
+
+    return <MovieDetail movie={movie} showtimes={showtimes} />;
 }

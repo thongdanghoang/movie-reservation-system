@@ -56,3 +56,12 @@ export interface PaymentResponse {
     seatId: string;
     confirmationNumber: string;
 }
+
+export interface TicketResponse {
+    reservationId: string;
+    seatId: string;
+    status: SeatStatus;
+    email: string;
+    signedTicketToken: string;
+    paidAt: string;
+}

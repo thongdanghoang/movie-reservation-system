@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { useSeatStore } from '@/stores/seatStore';
 import { processPayment, SeatTakenError, ApiError } from '@/lib/api';
+import { BookingConfirmation } from './BookingConfirmation';
 
 interface CheckoutFormProps {
     onCancel?: () => void;
@@ -14,7 +15,6 @@ export function CheckoutForm({ onCancel }: CheckoutFormProps) {
     const [phone, setPhone] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
-    const [confirmationNumber, setConfirmationNumber] = useState<string | null>(null);
 
     const heldSeat = useSeatStore((state) => state.heldSeat);
     const updateSeatStatus = useSeatStore((state) => state.updateSeatStatus);
@@ -40,7 +40,6 @@ export function CheckoutForm({ onCancel }: CheckoutFormProps) {
 
             // Transition seat to SOLD in the UI
             updateSeatStatus(heldSeat.seatId, 'SOLD');
-            setConfirmationNumber(result.confirmationNumber);
             setConfirmationInStore(result.confirmationNumber);
             setPaymentStatus('success');
             setIsSuccess(true);
@@ -73,22 +72,9 @@ export function CheckoutForm({ onCancel }: CheckoutFormProps) {
         );
     }
 
-    if (isSuccess && confirmationNumber) {
+    if (isSuccess && heldSeat) {
         return (
-            <div className="bg-white border border-green-200 shadow-sm rounded-lg p-6">
-                <div className="text-center">
-                    <div className="text-green-500 text-5xl mb-4">✓</div>
-                    <h3 className="text-xl font-bold text-green-700 mb-2">Payment Successful!</h3>
-                    <p className="text-gray-600 mb-4">Your booking is confirmed.</p>
-                    <div className="bg-green-50 border border-green-200 rounded-md p-4">
-                        <p className="text-sm text-gray-500">Confirmation Number</p>
-                        <p className="text-lg font-mono font-bold text-green-800">{confirmationNumber}</p>
-                    </div>
-                    <p className="text-sm text-gray-500 mt-4">
-                        A confirmation has been sent to <strong>{email}</strong>.
-                    </p>
-                </div>
-            </div>
+            <BookingConfirmation reservationId={heldSeat.reservationId} />
         );
     }
 

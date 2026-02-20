@@ -1,4 +1,4 @@
-import { Movie, Showtime, Seat, HoldSeatResponse, PaymentResponse } from '@/shared/types';
+import { Movie, Showtime, Seat, HoldSeatResponse, PaymentResponse, TicketResponse } from '@/shared/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -159,6 +159,24 @@ export async function processPayment(
 
     if (!response.ok) {
         throw new ApiError(response.status, 'Payment failed. Please try again.');
+    }
+
+    return response.json();
+}
+
+export async function getTicket(reservationId: string): Promise<TicketResponse> {
+    const response = await fetch(`${API_BASE_URL}/api/v1/reservations/${encodeURIComponent(reservationId)}/ticket`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        if (response.status === 404) {
+            throw new ApiError(404, `Ticket not found or not available yet`);
+        }
+        throw new ApiError(response.status, `Failed to fetch ticket: ${response.statusText}`);
     }
 
     return response.json();

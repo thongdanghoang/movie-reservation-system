@@ -65,4 +65,12 @@ public class SeatRepository implements PanacheRepositoryBase<Seat, UUID> {
                         .setParameter("rid", reservationId)
                         .getSingleResultOrNull());
     }
+
+    /**
+     * Find seat by reservationId without locking.
+     * Useful for read-only operations like fetching a ticket.
+     */
+    public Uni<Seat> findByReservationId(UUID reservationId) {
+        return find("reservationId", reservationId).firstResult();
+    }
 }
