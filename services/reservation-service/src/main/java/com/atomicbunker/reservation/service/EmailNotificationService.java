@@ -13,7 +13,7 @@ import java.time.Duration;
 @Slf4j
 public class EmailNotificationService {
 
-    @ConfigProperty(name = "app.frontend.base-url", defaultValue = "http://localhost:3000")
+    @ConfigProperty(name = "app.frontend.base-url")
     String frontendBaseUrl;
 
     @ConsumeEvent("seat-sold-email")
