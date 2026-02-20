@@ -8,6 +8,7 @@ import * as api from '@/lib/api';
 // Mock the API module
 vi.mock('@/lib/api', () => ({
     processPayment: vi.fn(),
+    getTicket: vi.fn(),
     ApiError: class ApiError extends Error {
         constructor(public status: number, message: string) {
             super(message);
@@ -44,6 +45,15 @@ const mockPaymentResponse = {
     status: 'SOLD' as const,
     seatId: '770e8400-e29b-41d4-a716-446655440001',
     confirmationNumber: 'CNF-ABCD1234',
+};
+
+const mockTicketResponse = {
+    reservationId: 'res-1234-5678-abcd-efgh',
+    seatId: '770e8400-e29b-41d4-a716-446655440001',
+    status: 'SOLD' as const,
+    email: 'test@example.com',
+    signedTicketToken: 'mock-signed-token',
+    paidAt: new Date().toISOString()
 };
 
 function setupStoreWithHeldSeat() {
@@ -130,8 +140,9 @@ describe('CheckoutForm', () => {
         });
 
         it('shows confirmation screen on successful payment', async () => {
-            const { processPayment } = api;
+            const { processPayment, getTicket } = api;
             vi.mocked(processPayment).mockResolvedValue(mockPaymentResponse);
+            vi.mocked(getTicket).mockResolvedValue(mockTicketResponse);
 
             render(<CheckoutForm />);
 
@@ -140,8 +151,10 @@ describe('CheckoutForm', () => {
             fireEvent.click(screen.getByRole('button', { name: /pay now/i }));
 
             await waitFor(() => {
-                expect(screen.getByText(/payment successful/i)).toBeInTheDocument();
-                expect(screen.getByText('CNF-ABCD1234')).toBeInTheDocument();
+                expect(screen.getByText(/payment successful!/i)).toBeInTheDocument();
+                // The reservation ID is usually part of the display, testing its presence
+                // BookingConfirmation does ticket.reservationId.split('-')[0]
+                expect(screen.getByText(mockTicketResponse.reservationId.split('-')[0])).toBeInTheDocument();
                 expect(screen.getByText(/test@example.com/i)).toBeInTheDocument();
             });
         });

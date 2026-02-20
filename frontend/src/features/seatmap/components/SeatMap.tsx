@@ -12,12 +12,6 @@ const STATUS_COLORS: Record<SeatStatus, string> = {
     SOLD: '#ef4444',
 };
 
-const STATUS_HOVER_COLORS: Record<SeatStatus, string> = {
-    AVAILABLE: '#16a34a',
-    HELD: '#ea580c',
-    SOLD: '#dc2626',
-};
-
 interface SeatMapProps {
     onSeatClick?: (seat: Seat) => void;
 }
@@ -36,10 +30,6 @@ export function SeatMap({ onSeatClick }: SeatMapProps) {
 
     const svgWidth = columns.length * (SEAT_SIZE + SEAT_GAP) + 100;
     const svgHeight = rows.length * (SEAT_SIZE + SEAT_GAP) + 100;
-
-    useEffect(() => {
-        setViewBox({ x: 0, y: 0, width: svgWidth, height: svgHeight });
-    }, [svgWidth, svgHeight]);
 
     useEffect(() => {
         if (containerRef.current) {
@@ -194,9 +184,8 @@ export function SeatMap({ onSeatClick }: SeatMapProps) {
                                     fill={STATUS_COLORS[seat.status]}
                                     stroke={isSelected ? '#1d4ed8' : 'transparent'}
                                     strokeWidth={isSelected ? 3 : 0}
-                                    className={`transition-all duration-150 ${
-                                        isAvailable ? 'cursor-pointer hover:fill-[#16a34a]' : 'cursor-not-allowed'
-                                    }`}
+                                    className={`transition-all duration-150 ${isAvailable ? 'cursor-pointer hover:fill-[#16a34a]' : 'cursor-not-allowed'
+                                        }`}
                                     onClick={() => handleSeatClick(seat)}
                                 />
                                 <text

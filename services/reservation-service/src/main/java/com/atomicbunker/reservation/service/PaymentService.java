@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 import io.smallrye.mutiny.Uni;
+import io.vertx.core.eventbus.EventBus;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.PessimisticLockException;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class PaymentService {
     private final SeatHoldService seatHoldService;
     private final SeatWebSocket seatWebSocket;
     private final ObjectMapper objectMapper;
+    private final EventBus eventBus;
     /**
      * Injected to open an independent session+transaction for expired-hold
      * releases.
@@ -114,6 +116,8 @@ public class PaymentService {
                             .call(s -> seatRepository.flush())
                             .chain(updatedSeat -> {
                                 broadcastSeatSold(updatedSeat);
+                                // Publish event for simulated email notification
+                                eventBus.publish("seat-sold-email", updatedSeat);
                                 return Uni.createFrom().item(createPaymentResponse(updatedSeat));
                             });
                 });
