@@ -36,6 +36,7 @@ const mockHeldSeat = {
     heldAt: new Date().toISOString(),
     holdExpiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
     reservationId: 'res-1234-5678-abcd-efgh',
+    sessionId: 'test-session-abc123',
 };
 
 const mockPaymentResponse = {
@@ -159,7 +160,8 @@ describe('CheckoutForm', () => {
                 expect(processPayment).toHaveBeenCalledWith(
                     mockHeldSeat.reservationId,
                     'guest@example.com',
-                    '555-9999'
+                    '555-9999',
+                    mockHeldSeat.sessionId
                 );
             });
         });

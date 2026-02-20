@@ -126,13 +126,17 @@ export async function deleteSeatHold(seatId: string): Promise<void> {
 export async function processPayment(
     reservationId: string,
     email: string,
-    phone: string
+    phone: string,
+    sessionId?: string
 ): Promise<PaymentResponse> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (sessionId) headers['X-Session-ID'] = sessionId;
+
     const response = await fetch(
         `${API_BASE_URL}/api/v1/reservations/${encodeURIComponent(reservationId)}/pay`,
         {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify({ email, phone }),
         }
     );

@@ -31,7 +31,12 @@ export function CheckoutForm({ onCancel }: CheckoutFormProps) {
         setPaymentStatus('processing');
 
         try {
-            const result = await processPayment(heldSeat.reservationId, email, phone);
+            const result = await processPayment(
+                heldSeat.reservationId,
+                email,
+                phone,
+                heldSeat.sessionId  // forward session ownership proof
+            );
 
             // Transition seat to SOLD in the UI
             updateSeatStatus(heldSeat.seatId, 'SOLD');
@@ -43,11 +48,15 @@ export function CheckoutForm({ onCancel }: CheckoutFormProps) {
             setPaymentStatus('error');
 
             if (err instanceof SeatTakenError) {
+                // 409: seat taken — terminal error, user must pick a new seat
+                clearHold();
                 toast.error('Seat is no longer available. Please select another seat.');
             } else if (err instanceof ApiError && err.status === 410) {
+                // 410: hold expired — terminal error, user must pick a new seat
+                clearHold();
                 toast.error('Your hold has expired. Please select a new seat.');
-                // Don't clear hold here — user needs to see the message
             } else {
+                // Network / server error — form can be retried, keep hold
                 toast.error('Payment failed. Please try again.');
             }
         } finally {

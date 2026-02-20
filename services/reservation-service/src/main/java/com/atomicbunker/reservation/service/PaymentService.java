@@ -28,7 +28,7 @@ public class PaymentService {
     private final ObjectMapper objectMapper;
 
     @WithTransaction
-    public Uni<PaymentResponse> processPayment(UUID reservationId, String email, String phone) {
+    public Uni<PaymentResponse> processPayment(UUID reservationId, String sessionId, String email, String phone) {
         return seatRepository.findByReservationIdWithLock(reservationId)
                 .chain(seat -> {
                     if (seat == null) {
@@ -46,14 +46,22 @@ public class PaymentService {
                                 new SeatAlreadyTakenException("Seat is not in HELD status"));
                     }
 
+                    // Ownership check: only the session that placed the hold may pay
+                    if (sessionId != null && !sessionId.equals(seat.getHeldBy())) {
+                        return Uni.createFrom().failure(
+                                new jakarta.ws.rs.ForbiddenException("You do not own this reservation"));
+                    }
+
                     if (seat.isHoldExpired()) {
-                        // Release the expired hold, then return 410
+                        // Fix: use persistAndFlush so the release commits before returning
+                        // the failure Uni. With plain persist(), the surrounding @WithTransaction
+                        // would roll back the AVAILABLE update together with the failure.
                         seat.setStatus(SeatStatus.AVAILABLE);
                         seat.setHeldAt(null);
                         seat.setHeldBy(null);
                         seat.setReservationId(null);
-                        return seatRepository.persist(seat)
-                                .chain(s -> Uni.createFrom().failure(
+                        return seatRepository.persistAndFlush(seat)
+                                .chain(ignored -> Uni.createFrom().failure(
                                         new HoldExpiredException("Your hold has expired. Please select a new seat.")));
                     }
 

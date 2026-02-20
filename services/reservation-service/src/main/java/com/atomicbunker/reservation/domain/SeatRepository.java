@@ -44,8 +44,12 @@ public class SeatRepository implements PanacheRepositoryBase<Seat, UUID> {
     }
 
     /**
-     * Find seat by reservationId with pessimistic write lock (FOR UPDATE).
-     * Used by payment flow to prevent double-payment race conditions.
+     * Find seat by reservationId with pessimistic write lock (FOR UPDATE NOWAIT).
+     * Fails immediately (PessimisticLockException) if row is already locked,
+     * preventing the Vert.x event-loop from blocking on competing transactions.
+     *
+     * A UNIQUE constraint on reservation_id (migration V1.0.4) ensures
+     * getSingleResultOrNull() never throws NonUniqueResultException.
      */
     public Uni<Seat> findByReservationIdWithLock(UUID reservationId) {
         return getSession()
@@ -53,6 +57,8 @@ public class SeatRepository implements PanacheRepositoryBase<Seat, UUID> {
                         "FROM Seat WHERE reservationId = :rid", Seat.class)
                         .setParameter("rid", reservationId)
                         .setLockMode(LockModeType.PESSIMISTIC_WRITE)
+                        // NOWAIT: fail immediately rather than blocking the event loop
+                        .setHint("jakarta.persistence.lock.timeout", 0)
                         .getSingleResultOrNull());
     }
 }

@@ -6,6 +6,7 @@ import com.atomicbunker.reservation.service.PaymentService;
 import io.smallrye.mutiny.Uni;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
@@ -28,9 +29,10 @@ public class PaymentResource {
     @Path("/{reservationId}/pay")
     public Uni<Response> processPayment(
             @PathParam("reservationId") UUID reservationId,
+            @HeaderParam("X-Session-ID") String sessionId,
             @Valid PaymentRequest request) {
 
-        return paymentService.processPayment(reservationId, request.email(), request.phone())
+        return paymentService.processPayment(reservationId, sessionId, request.email(), request.phone())
                 .map(response -> Response.ok(response).build());
     }
 }
