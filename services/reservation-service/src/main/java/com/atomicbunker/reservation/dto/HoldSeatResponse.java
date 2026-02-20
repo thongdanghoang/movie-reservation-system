@@ -7,9 +7,11 @@ import java.util.UUID;
 
 @Builder
 public record HoldSeatResponse(
-    UUID seatId,
-    SeatStatus status,
-    Instant heldAt,
-    Instant holdExpiresAt,
-    UUID reservationId
-) {}
+        UUID seatId,
+        SeatStatus status,
+        Instant heldAt,
+        Instant holdExpiresAt,
+        UUID reservationId,
+        String sessionId // echoed from the request so the client can use it as X-Session-ID on payment
+) {
+}

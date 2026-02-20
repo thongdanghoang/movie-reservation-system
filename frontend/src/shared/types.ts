@@ -47,4 +47,12 @@ export interface HoldSeatResponse {
     heldAt: string;
     holdExpiresAt: string;
     reservationId: string;
+    sessionId: string; // echoed from the hold request; used for ownership verification on payment
+}
+
+export interface PaymentResponse {
+    reservationId: string;
+    status: SeatStatus;
+    seatId: string;
+    confirmationNumber: string;
 }

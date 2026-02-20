@@ -10,18 +10,18 @@ import java.util.Map;
 import java.util.UUID;
 
 @Provider
-public class SeatAlreadyTakenExceptionMapper implements ExceptionMapper<SeatAlreadyTakenException> {
+public class HoldExpiredExceptionMapper implements ExceptionMapper<HoldExpiredException> {
 
     @Override
-    public Response toResponse(SeatAlreadyTakenException exception) {
+    public Response toResponse(HoldExpiredException exception) {
         // Use LinkedHashMap to avoid Map.of() NPE when getMessage() is null
-        String message = exception.getMessage() != null ? exception.getMessage() : "Seat is no longer available";
+        String message = exception.getMessage() != null ? exception.getMessage() : "Hold has expired";
         Map<String, String> error = new LinkedHashMap<>();
-        error.put("code", "SEAT_TAKEN");
+        error.put("code", "HOLD_EXPIRED");
         error.put("message", message);
         error.put("traceId", UUID.randomUUID().toString());
 
-        return Response.status(Response.Status.CONFLICT)
+        return Response.status(Response.Status.GONE)
                 .type(MediaType.APPLICATION_JSON)
                 .entity(error)
                 .build();

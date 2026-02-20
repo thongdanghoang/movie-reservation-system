@@ -7,6 +7,9 @@ interface SeatStore {
     heldSeat: HoldSeatResponse | null;
     isHolding: boolean;
     holdError: string | null;
+    paymentStatus: 'idle' | 'processing' | 'success' | 'error';
+    paymentError: string | null;
+    confirmationNumber: string | null;
     setSeats: (seats: Seat[]) => void;
     updateSeatStatus: (seatId: string, status: SeatStatus) => void;
     toggleSeatSelection: (seatId: string) => void;
@@ -15,6 +18,9 @@ interface SeatStore {
     setIsHolding: (isHolding: boolean) => void;
     setHoldError: (error: string | null) => void;
     clearHold: () => void;
+    setPaymentStatus: (status: 'idle' | 'processing' | 'success' | 'error') => void;
+    setPaymentError: (error: string | null) => void;
+    setConfirmationNumber: (number: string | null) => void;
 }
 
 export const useSeatStore = create<SeatStore>((set) => ({
@@ -23,6 +29,9 @@ export const useSeatStore = create<SeatStore>((set) => ({
     heldSeat: null,
     isHolding: false,
     holdError: null,
+    paymentStatus: 'idle',
+    paymentError: null,
+    confirmationNumber: null,
 
     setSeats: (seats) => set({ seats }),
 
@@ -51,5 +60,16 @@ export const useSeatStore = create<SeatStore>((set) => ({
 
     setHoldError: (holdError) => set({ holdError }),
 
-    clearHold: () => set({ heldSeat: null, holdError: null, isHolding: false }),
+    clearHold: () => set({
+        heldSeat: null,
+        holdError: null,
+        isHolding: false,
+        paymentStatus: 'idle',
+        paymentError: null,
+        confirmationNumber: null,
+    }),
+
+    setPaymentStatus: (paymentStatus) => set({ paymentStatus }),
+    setPaymentError: (paymentError) => set({ paymentError }),
+    setConfirmationNumber: (confirmationNumber) => set({ confirmationNumber }),
 }));

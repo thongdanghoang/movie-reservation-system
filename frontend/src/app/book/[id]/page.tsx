@@ -128,7 +128,7 @@ export default function BookingPage({ params }: BookingPageProps) {
     const handleCancelHold = useCallback(async () => {
         if (heldSeat) {
             try {
-                await deleteSeatHold(heldSeat.seatId);
+                await deleteSeatHold(heldSeat.seatId, heldSeat.sessionId);
                 updateSeatStatus(heldSeat.seatId, 'AVAILABLE');
                 clearHold();
                 toast.info('Hold cancelled', {

@@ -38,6 +38,14 @@ public class Seat extends PanacheEntityBase {
     @JoinColumn(name = "showtime_id", nullable = false)
     private Showtime showtime;
 
+    /**
+     * Read-only mirror of the showtime_id FK column.
+     * Allows access to the showtime UUID without triggering lazy-loading of the
+     * Showtime proxy — critical for WebSocket broadcasts after native SQL queries.
+     */
+    @Column(name = "showtime_id", insertable = false, updatable = false)
+    private UUID showtimeId;
+
     @NotBlank(message = "Seat row is required")
     @Column(name = "seat_row", nullable = false)
     private String seatRow;
@@ -61,8 +69,18 @@ public class Seat extends PanacheEntityBase {
     @Column(name = "reservation_id")
     private UUID reservationId;
 
+    @Column(name = "email")
+    private String email;
+
+    @Column(name = "phone")
+    private String phone;
+
+    @Column(name = "paid_at")
+    private Instant paidAt;
+
     public boolean isHoldExpired() {
-        if (heldAt == null) return false;
+        if (heldAt == null)
+            return false;
         return Instant.now().isAfter(heldAt.plus(5, ChronoUnit.MINUTES));
     }
 }

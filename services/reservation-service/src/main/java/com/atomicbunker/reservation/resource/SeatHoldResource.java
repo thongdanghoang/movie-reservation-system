@@ -10,6 +10,7 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
+import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
@@ -32,29 +33,35 @@ public class SeatHoldResource {
     public Uni<Response> holdSeat(
             @PathParam("seatId") UUID seatId,
             @Valid HoldSeatRequest request) {
-        
+
         return seatHoldService.holdSeat(seatId, request.sessionId())
-            .map(response -> Response.ok(response).build())
-            .onFailure(SeatAlreadyTakenException.class)
-            .recoverWithItem(ex -> Response.status(Response.Status.CONFLICT)
-                .entity(Map.of(
-                    "code", "SEAT_TAKEN",
-                    "message", ex.getMessage()
-                ))
-                .build());
+                .map(response -> Response.ok(response).build())
+                .onFailure(SeatAlreadyTakenException.class)
+                .recoverWithItem(ex -> Response.status(Response.Status.CONFLICT)
+                        .entity(Map.of(
+                                "code", "SEAT_TAKEN",
+                                "message", ex.getMessage()))
+                        .build());
     }
 
     @DELETE
     @Path("/{seatId}/hold")
-    public Uni<Response> releaseSeatHold(@PathParam("seatId") UUID seatId) {
-        return seatHoldService.releaseSeatHold(seatId)
-            .map(v -> Response.noContent().build())
-            .onFailure(jakarta.ws.rs.NotFoundException.class)
-            .recoverWithItem(ex -> Response.status(Response.Status.NOT_FOUND)
-                .entity(Map.of(
-                    "code", "NOT_FOUND",
-                    "message", ex.getMessage()
-                ))
-                .build());
+    public Uni<Response> releaseSeatHold(
+            @PathParam("seatId") UUID seatId,
+            @HeaderParam("X-Session-ID") String sessionId) {
+        return seatHoldService.releaseSeatHold(seatId, sessionId)
+                .map(v -> Response.noContent().build())
+                .onFailure(jakarta.ws.rs.NotFoundException.class)
+                .recoverWithItem(ex -> Response.status(Response.Status.NOT_FOUND)
+                        .entity(Map.of(
+                                "code", "NOT_FOUND",
+                                "message", ex.getMessage()))
+                        .build())
+                .onFailure(jakarta.ws.rs.ForbiddenException.class)
+                .recoverWithItem(ex -> Response.status(Response.Status.FORBIDDEN)
+                        .entity(Map.of(
+                                "code", "FORBIDDEN",
+                                "message", ex.getMessage()))
+                        .build());
     }
 }

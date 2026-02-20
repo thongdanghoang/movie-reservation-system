@@ -1,4 +1,4 @@
-import { Movie, Showtime, Seat, HoldSeatResponse } from '@/shared/types';
+import { Movie, Showtime, Seat, HoldSeatResponse, PaymentResponse } from '@/shared/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -110,15 +110,56 @@ export async function holdSeat(seatId: string, sessionId: string): Promise<HoldS
     return response.json();
 }
 
-export async function deleteSeatHold(seatId: string): Promise<void> {
+export async function deleteSeatHold(seatId: string, sessionId?: string): Promise<void> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (sessionId) headers['X-Session-ID'] = sessionId;
+
     const response = await fetch(`${API_BASE_URL}/api/v1/seats/${encodeURIComponent(seatId)}/hold`, {
         method: 'DELETE',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers,
     });
 
     if (!response.ok) {
         throw new ApiError(response.status, `Failed to release seat hold: ${response.statusText}`);
     }
+}
+
+export async function processPayment(
+    reservationId: string,
+    email: string,
+    phone: string,
+    sessionId?: string
+): Promise<PaymentResponse> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (sessionId) headers['X-Session-ID'] = sessionId;
+
+    const response = await fetch(
+        `${API_BASE_URL}/api/v1/reservations/${encodeURIComponent(reservationId)}/pay`,
+        {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ email, phone }),
+        }
+    );
+
+    if (response.status === 409) {
+        let message = 'Seat is no longer available';
+        try {
+            const error = await response.json();
+            message = error.message || message;
+        } catch {
+            // Non-JSON 409 response — use default message
+        }
+        throw new SeatTakenError(message);
+    }
+
+    if (response.status === 410) {
+        throw new ApiError(410, 'Your hold has expired. Please select a new seat.');
+    }
+
+    if (!response.ok) {
+        throw new ApiError(response.status, 'Payment failed. Please try again.');
+    }
+
+    return response.json();
 }

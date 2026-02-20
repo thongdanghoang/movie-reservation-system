@@ -1,5 +1,9 @@
-import { useState, useEffect } from 'react';
+'use client';
+
+import { useState } from 'react';
+import { toast } from 'sonner';
 import { useSeatStore } from '@/stores/seatStore';
+import { processPayment, SeatTakenError, ApiError } from '@/lib/api';
 
 interface CheckoutFormProps {
     onCancel?: () => void;
@@ -9,30 +13,55 @@ export function CheckoutForm({ onCancel }: CheckoutFormProps) {
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
+    const [confirmationNumber, setConfirmationNumber] = useState<string | null>(null);
 
     const heldSeat = useSeatStore((state) => state.heldSeat);
+    const updateSeatStatus = useSeatStore((state) => state.updateSeatStatus);
+    const setPaymentStatus = useSeatStore((state) => state.setPaymentStatus);
+    const setConfirmationInStore = useSeatStore((state) => state.setConfirmationNumber);
+    const clearHold = useSeatStore((state) => state.clearHold);
 
-    useEffect(() => {
-        if (!isSubmitting) return;
-
-        // Simulate submission (will be implemented in Story 2.3)
-        const timerId = setTimeout(() => {
-            setIsSubmitting(false);
-            console.log('Submitted booking for reservation:', heldSeat?.reservationId, '[REDACTED]', '[REDACTED]');
-            // TODO(Story 2.3): transition to payment processing
-        }, 500);
-
-        return () => clearTimeout(timerId);
-    }, [isSubmitting, heldSeat?.reservationId]);
-
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (!heldSeat) return;
 
-        // Basic frontend validation is handled by HTML5 attributes
-        // but we can add more specific rules here if needed
         setIsSubmitting(true);
+        setPaymentStatus('processing');
+
+        try {
+            const result = await processPayment(
+                heldSeat.reservationId,
+                email,
+                phone,
+                heldSeat.sessionId  // forward session ownership proof
+            );
+
+            // Transition seat to SOLD in the UI
+            updateSeatStatus(heldSeat.seatId, 'SOLD');
+            setConfirmationNumber(result.confirmationNumber);
+            setConfirmationInStore(result.confirmationNumber);
+            setPaymentStatus('success');
+            setIsSuccess(true);
+        } catch (err) {
+            setPaymentStatus('error');
+
+            if (err instanceof SeatTakenError) {
+                // 409: seat taken — terminal error, user must pick a new seat
+                clearHold();
+                toast.error('Seat is no longer available. Please select another seat.');
+            } else if (err instanceof ApiError && err.status === 410) {
+                // 410: hold expired — terminal error, user must pick a new seat
+                clearHold();
+                toast.error('Your hold has expired. Please select a new seat.');
+            } else {
+                // Network / server error — form can be retried, keep hold
+                toast.error('Payment failed. Please try again.');
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     if (!heldSeat) {
@@ -40,6 +69,25 @@ export function CheckoutForm({ onCancel }: CheckoutFormProps) {
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 opacity-60">
                 <h3 className="text-lg font-semibold mb-2">Guest Checkout</h3>
                 <p className="text-gray-500">Hold a seat to proceed with checkout.</p>
+            </div>
+        );
+    }
+
+    if (isSuccess && confirmationNumber) {
+        return (
+            <div className="bg-white border border-green-200 shadow-sm rounded-lg p-6">
+                <div className="text-center">
+                    <div className="text-green-500 text-5xl mb-4">✓</div>
+                    <h3 className="text-xl font-bold text-green-700 mb-2">Payment Successful!</h3>
+                    <p className="text-gray-600 mb-4">Your booking is confirmed.</p>
+                    <div className="bg-green-50 border border-green-200 rounded-md p-4">
+                        <p className="text-sm text-gray-500">Confirmation Number</p>
+                        <p className="text-lg font-mono font-bold text-green-800">{confirmationNumber}</p>
+                    </div>
+                    <p className="text-sm text-gray-500 mt-4">
+                        A confirmation has been sent to <strong>{email}</strong>.
+                    </p>
+                </div>
             </div>
         );
     }
@@ -68,7 +116,7 @@ export function CheckoutForm({ onCancel }: CheckoutFormProps) {
                         required
                         className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                         placeholder="you@example.com"
-                        disabled={isSubmitting || !heldSeat}
+                        disabled={isSubmitting}
                     />
                 </div>
 
@@ -85,17 +133,17 @@ export function CheckoutForm({ onCancel }: CheckoutFormProps) {
                         pattern="[0-9+() \-]+"
                         className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                         placeholder="(555) 123-4567"
-                        disabled={isSubmitting || !heldSeat}
+                        disabled={isSubmitting}
                     />
                 </div>
 
                 <div className="pt-4 flex gap-3">
                     <button
                         type="submit"
-                        disabled={isSubmitting || !heldSeat}
+                        disabled={isSubmitting}
                         className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                     >
-                        {isSubmitting ? 'Processing...' : 'Continue to Payment'}
+                        {isSubmitting ? 'Processing...' : 'Pay Now'}
                     </button>
                     {onCancel && (
                         <button
