@@ -109,7 +109,7 @@ public class SeatHoldService {
     }
 
     @WithTransaction
-    public Uni<Void> releaseSeatHold(UUID seatId) {
+    public Uni<Void> releaseSeatHold(UUID seatId, String sessionId) {
         log.info("Attempting to release hold for seat {}", seatId);
 
         return seatRepository.findByIdWithLock(seatId)
@@ -123,6 +123,14 @@ public class SeatHoldService {
                     if (seat.getStatus() != SeatStatus.HELD) {
                         log.info("Seat {} is not held, nothing to release", seatId);
                         return Uni.createFrom().nullItem();
+                    }
+
+                    // Ownership check: only the session that placed the hold can release it
+                    if (sessionId == null || !sessionId.equals(seat.getHeldBy())) {
+                        log.warn("Session {} attempted to release seat {} owned by {}",
+                                sessionId, seatId, seat.getHeldBy());
+                        return Uni.createFrom().failure(
+                                new jakarta.ws.rs.ForbiddenException("You do not own this hold"));
                     }
 
                     seat.setStatus(SeatStatus.AVAILABLE);

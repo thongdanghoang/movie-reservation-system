@@ -110,12 +110,13 @@ export async function holdSeat(seatId: string, sessionId: string): Promise<HoldS
     return response.json();
 }
 
-export async function deleteSeatHold(seatId: string): Promise<void> {
+export async function deleteSeatHold(seatId: string, sessionId?: string): Promise<void> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (sessionId) headers['X-Session-ID'] = sessionId;
+
     const response = await fetch(`${API_BASE_URL}/api/v1/seats/${encodeURIComponent(seatId)}/hold`, {
         method: 'DELETE',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers,
     });
 
     if (!response.ok) {

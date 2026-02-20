@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.persistence.PessimisticLockException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -24,12 +25,17 @@ import java.util.UUID;
 public class PaymentService {
 
     private final SeatRepository seatRepository;
+    private final SeatHoldService seatHoldService;
     private final SeatWebSocket seatWebSocket;
     private final ObjectMapper objectMapper;
 
     @WithTransaction
     public Uni<PaymentResponse> processPayment(UUID reservationId, String sessionId, String email, String phone) {
         return seatRepository.findByReservationIdWithLock(reservationId)
+                .onFailure(PessimisticLockException.class)
+                .recoverWithUni(e -> Uni.createFrom().failure(
+                        new jakarta.ws.rs.WebApplicationException(
+                                "Seat is currently being processed by another request, please retry", 503)))
                 .chain(seat -> {
                     if (seat == null) {
                         return Uni.createFrom().failure(
@@ -46,22 +52,20 @@ public class PaymentService {
                                 new SeatAlreadyTakenException("Seat is not in HELD status"));
                     }
 
-                    // Ownership check: only the session that placed the hold may pay
-                    if (sessionId != null && !sessionId.equals(seat.getHeldBy())) {
+                    // Ownership check: missing or wrong X-Session-ID → 403
+                    if (sessionId == null || !sessionId.equals(seat.getHeldBy())) {
                         return Uni.createFrom().failure(
                                 new jakarta.ws.rs.ForbiddenException("You do not own this reservation"));
                     }
 
                     if (seat.isHoldExpired()) {
-                        // Fix: use persistAndFlush so the release commits before returning
-                        // the failure Uni. With plain persist(), the surrounding @WithTransaction
-                        // would roll back the AVAILABLE update together with the failure.
-                        seat.setStatus(SeatStatus.AVAILABLE);
-                        seat.setHeldAt(null);
-                        seat.setHeldBy(null);
-                        seat.setReservationId(null);
-                        return seatRepository.persistAndFlush(seat)
-                                .chain(ignored -> Uni.createFrom().failure(
+                        // Delegate release to SeatHoldService which runs in its OWN @WithTransaction.
+                        // This ensures the AVAILABLE status update is committed in a separate
+                        // transaction BEFORE this outer transaction emits the failure Uni.
+                        // Using persistAndFlush() here wouldn't help: @WithTransaction rolls back
+                        // the whole outer transaction (including the flush) when the Uni fails.
+                        return seatHoldService.releaseSeatHold(seat.getId(), seat.getHeldBy())
+                                .chain(() -> Uni.createFrom().failure(
                                         new HoldExpiredException("Your hold has expired. Please select a new seat.")));
                     }
 

@@ -100,12 +100,15 @@ public class PaymentResourceTest {
                                 .body()
                                 .asString();
 
-                // Extract reservationId from the hold response
-                String reservationId = io.restassured.path.json.JsonPath.from(holdResponse).getString("reservationId");
+                // Extract reservationId and sessionId from the hold response
+                io.restassured.path.json.JsonPath holdJson = io.restassured.path.json.JsonPath.from(holdResponse);
+                String reservationId = holdJson.getString("reservationId");
+                String sessionId = holdJson.getString("sessionId");
 
-                // Step 2: Pay for the held seat
+                // Step 2: Pay for the held seat — must include X-Session-ID to prove ownership
                 given()
                                 .contentType(ContentType.JSON)
+                                .header("X-Session-ID", sessionId)
                                 .body("{\"email\":\"guest@example.com\",\"phone\":\"555-0123\"}")
                                 .when()
                                 .post("/api/v1/reservations/{reservationId}/pay", reservationId)
@@ -131,20 +134,24 @@ public class PaymentResourceTest {
                                 .statusCode(200)
                                 .extract().body().asString();
 
-                String reservationId = io.restassured.path.json.JsonPath.from(holdResponse).getString("reservationId");
+                io.restassured.path.json.JsonPath holdJson = io.restassured.path.json.JsonPath.from(holdResponse);
+                String reservationId = holdJson.getString("reservationId");
+                String sessionId = holdJson.getString("sessionId");
 
-                // Step 2: First payment — succeeds
+                // Step 2: First payment (owner) — succeeds
                 given()
                                 .contentType(ContentType.JSON)
+                                .header("X-Session-ID", sessionId)
                                 .body("{\"email\":\"first@example.com\",\"phone\":\"555-0001\"}")
                                 .when()
                                 .post("/api/v1/reservations/{reservationId}/pay", reservationId)
                                 .then()
                                 .statusCode(200);
 
-                // Step 3: Second payment — should fail with 409
+                // Step 3: Second payment (same owner, seat now SOLD) — should fail with 409
                 given()
                                 .contentType(ContentType.JSON)
+                                .header("X-Session-ID", sessionId)
                                 .body("{\"email\":\"second@example.com\",\"phone\":\"555-0002\"}")
                                 .when()
                                 .post("/api/v1/reservations/{reservationId}/pay", reservationId)
