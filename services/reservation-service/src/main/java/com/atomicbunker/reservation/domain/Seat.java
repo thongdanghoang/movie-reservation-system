@@ -61,8 +61,18 @@ public class Seat extends PanacheEntityBase {
     @Column(name = "reservation_id")
     private UUID reservationId;
 
+    @Column(name = "email")
+    private String email;
+
+    @Column(name = "phone")
+    private String phone;
+
+    @Column(name = "paid_at")
+    private Instant paidAt;
+
     public boolean isHoldExpired() {
-        if (heldAt == null) return false;
+        if (heldAt == null)
+            return false;
         return Instant.now().isAfter(heldAt.plus(5, ChronoUnit.MINUTES));
     }
 }

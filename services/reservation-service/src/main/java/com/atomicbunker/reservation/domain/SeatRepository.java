@@ -25,20 +25,34 @@ public class SeatRepository implements PanacheRepositoryBase<Seat, UUID> {
      */
     public Uni<Seat> findByIdWithLock(UUID seatId) {
         return find("id", seatId)
-            .withLock(LockModeType.PESSIMISTIC_WRITE)
-            .firstResult();
+                .withLock(LockModeType.PESSIMISTIC_WRITE)
+                .firstResult();
     }
 
     /**
-     * Find available seat by ID. Returns empty if seat doesn't exist or is not available.
+     * Find available seat by ID. Returns empty if seat doesn't exist or is not
+     * available.
      */
     public Uni<Optional<Seat>> findAvailableById(UUID seatId) {
         return findById(seatId)
-            .map(seat -> {
-                if (seat == null || seat.getStatus() != SeatStatus.AVAILABLE) {
-                    return Optional.empty();
-                }
-                return Optional.of(seat);
-            });
+                .map(seat -> {
+                    if (seat == null || seat.getStatus() != SeatStatus.AVAILABLE) {
+                        return Optional.empty();
+                    }
+                    return Optional.of(seat);
+                });
+    }
+
+    /**
+     * Find seat by reservationId with pessimistic write lock (FOR UPDATE).
+     * Used by payment flow to prevent double-payment race conditions.
+     */
+    public Uni<Seat> findByReservationIdWithLock(UUID reservationId) {
+        return getSession()
+                .chain(session -> session.createQuery(
+                        "FROM Seat WHERE reservationId = :rid", Seat.class)
+                        .setParameter("rid", reservationId)
+                        .setLockMode(LockModeType.PESSIMISTIC_WRITE)
+                        .getSingleResultOrNull());
     }
 }

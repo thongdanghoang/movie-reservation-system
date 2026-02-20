@@ -1,101 +1,239 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+
 import { CheckoutForm } from './CheckoutForm';
 import { useSeatStore } from '@/stores/seatStore';
+import * as api from '@/lib/api';
+
+// Mock the API module
+vi.mock('@/lib/api', () => ({
+    processPayment: vi.fn(),
+    ApiError: class ApiError extends Error {
+        constructor(public status: number, message: string) {
+            super(message);
+            this.name = 'ApiError';
+        }
+    },
+    SeatTakenError: class SeatTakenError extends Error {
+        constructor(message: string) {
+            super(message);
+            this.name = 'SeatTakenError';
+        }
+    },
+}));
+
+// Mock sonner
+vi.mock('sonner', () => ({
+    toast: {
+        error: vi.fn(),
+        success: vi.fn(),
+    },
+}));
+
+const mockHeldSeat = {
+    seatId: '770e8400-e29b-41d4-a716-446655440001',
+    status: 'HELD' as const,
+    heldAt: new Date().toISOString(),
+    holdExpiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+    reservationId: 'res-1234-5678-abcd-efgh',
+};
+
+const mockPaymentResponse = {
+    reservationId: 'res-1234-5678-abcd-efgh',
+    status: 'SOLD' as const,
+    seatId: '770e8400-e29b-41d4-a716-446655440001',
+    confirmationNumber: 'CNF-ABCD1234',
+};
+
+function setupStoreWithHeldSeat() {
+    useSeatStore.setState({
+        heldSeat: mockHeldSeat,
+        paymentStatus: 'idle',
+        paymentError: null,
+        confirmationNumber: null,
+    });
+}
 
 describe('CheckoutForm', () => {
     beforeEach(() => {
-        useSeatStore.setState({ heldSeat: null });
-    });
-
-    it('renders disabled state when no seat is held (AC3 partial)', () => {
-        render(<CheckoutForm />);
-        expect(screen.getByText('Hold a seat to proceed with checkout.')).toBeInTheDocument();
-        expect(screen.queryByLabelText(/Email Address/i)).not.toBeInTheDocument();
-    });
-
-    it('renders email and phone inputs when seat is held (AC1)', () => {
+        // Reset store to a clean state before each test
         useSeatStore.setState({
-            heldSeat: {
-                reservationId: 'res-123',
-                seatId: 'A-1',
-                status: 'HELD',
-                holdExpiresAt: new Date(Date.now() + 300000).toISOString(),
-            },
+            seats: [],
+            selectedSeats: [],
+            heldSeat: null,
+            isHolding: false,
+            holdError: null,
+            paymentStatus: 'idle',
+            paymentError: null,
+            confirmationNumber: null,
+        });
+        vi.clearAllMocks();
+    });
+
+    describe('when no seat is held', () => {
+        it('renders placeholder message when no held seat', () => {
+            render(<CheckoutForm />);
+            expect(screen.getByText(/hold a seat to proceed/i)).toBeInTheDocument();
+        });
+    });
+
+    describe('when a seat is held', () => {
+        beforeEach(() => {
+            setupStoreWithHeldSeat();
         });
 
-        render(<CheckoutForm />);
-        expect(screen.getByText(/res-123/)).toBeInTheDocument();
-        expect(screen.getByText(/A-1/)).toBeInTheDocument();
-
-        const emailInput = screen.getByLabelText(/Email Address/i) as HTMLInputElement;
-        const phoneInput = screen.getByLabelText(/Phone Number/i) as HTMLInputElement;
-
-        expect(emailInput).toBeInTheDocument();
-        expect(emailInput.required).toBe(true);
-        expect(phoneInput).toBeInTheDocument();
-        expect(phoneInput.required).toBe(true);
-    });
-
-    it('prevents submission if fields are invalid or empty (AC2)', () => {
-        useSeatStore.setState({
-            heldSeat: {
-                reservationId: 'res-123',
-                seatId: 'A-1',
-                status: 'HELD',
-                holdExpiresAt: new Date(Date.now() + 300000).toISOString(),
-            },
+        it('renders the checkout form with email and phone inputs', () => {
+            render(<CheckoutForm />);
+            expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
+            expect(screen.getByLabelText(/phone number/i)).toBeInTheDocument();
         });
 
-        render(<CheckoutForm />);
-        const submitButton = screen.getByRole('button', { name: /Continue to Payment/i });
-        expect(submitButton).toBeInTheDocument();
-
-        // Form is invalid initially because fields are required and empty
-        const emailInput = screen.getByLabelText(/Email Address/i) as HTMLInputElement;
-        const phoneInput = screen.getByLabelText(/Phone Number/i) as HTMLInputElement;
-
-        expect(emailInput.required).toBe(true);
-        expect(phoneInput.required).toBe(true);
-    });
-
-    it('allows submission when fields are valid', () => {
-        useSeatStore.setState({
-            heldSeat: {
-                reservationId: 'res-123',
-                seatId: 'A-1',
-                status: 'HELD',
-                holdExpiresAt: new Date(Date.now() + 300000).toISOString(),
-            },
+        it('displays the reservation ID in the form', () => {
+            render(<CheckoutForm />);
+            expect(screen.getByText(mockHeldSeat.reservationId)).toBeInTheDocument();
         });
 
-        render(<CheckoutForm />);
-
-        const emailInput = screen.getByLabelText(/Email Address/i) as HTMLInputElement;
-        fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
-
-        const phoneInput = screen.getByLabelText(/Phone Number/i) as HTMLInputElement;
-        fireEvent.change(phoneInput, { target: { value: '555-1234' } });
-
-        expect(emailInput.value).toBe('test@example.com');
-        expect(phoneInput.value).toBe('555-1234');
-    });
-
-    it('calls onCancel when cancel button is clicked', () => {
-        useSeatStore.setState({
-            heldSeat: {
-                reservationId: 'res-123',
-                seatId: 'A-1',
-                status: 'HELD',
-                holdExpiresAt: new Date(Date.now() + 300000).toISOString(),
-            },
+        it('renders Pay Now button', () => {
+            render(<CheckoutForm />);
+            expect(screen.getByRole('button', { name: /pay now/i })).toBeInTheDocument();
         });
 
-        const onCancel = vi.fn();
-        render(<CheckoutForm onCancel={onCancel} />);
+        it('renders Cancel button when onCancel prop is provided', () => {
+            const onCancel = vi.fn();
+            render(<CheckoutForm onCancel={onCancel} />);
+            expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
+        });
 
-        const cancelButton = screen.getByRole('button', { name: /Cancel/i });
-        fireEvent.click(cancelButton);
-        expect(onCancel).toHaveBeenCalledTimes(1);
+        it('calls onCancel when Cancel is clicked', () => {
+            const onCancel = vi.fn();
+            render(<CheckoutForm onCancel={onCancel} />);
+            fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+            expect(onCancel).toHaveBeenCalledTimes(1);
+        });
+
+        it('disables submit button and shows Processing... during submission', async () => {
+            const { processPayment } = api;
+            vi.mocked(processPayment).mockImplementation(
+                () => new Promise((resolve) => setTimeout(() => resolve(mockPaymentResponse), 200))
+            );
+
+            render(<CheckoutForm />);
+
+            fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: 'test@example.com' } });
+            fireEvent.change(screen.getByLabelText(/phone number/i), { target: { value: '555-0100' } });
+
+            const form = screen.getByLabelText(/email address/i).closest('form')!;
+            await act(async () => { fireEvent.submit(form); });
+
+            expect(screen.getByRole('button', { name: /processing/i })).toBeDisabled();
+        });
+
+        it('shows confirmation screen on successful payment', async () => {
+            const { processPayment } = api;
+            vi.mocked(processPayment).mockResolvedValue(mockPaymentResponse);
+
+            render(<CheckoutForm />);
+
+            fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: 'test@example.com' } });
+            fireEvent.change(screen.getByLabelText(/phone number/i), { target: { value: '555-0100' } });
+            fireEvent.click(screen.getByRole('button', { name: /pay now/i }));
+
+            await waitFor(() => {
+                expect(screen.getByText(/payment successful/i)).toBeInTheDocument();
+                expect(screen.getByText('CNF-ABCD1234')).toBeInTheDocument();
+                expect(screen.getByText(/test@example.com/i)).toBeInTheDocument();
+            });
+        });
+
+        it('calls processPayment with correct arguments', async () => {
+            const { processPayment } = api;
+            vi.mocked(processPayment).mockResolvedValue(mockPaymentResponse);
+
+            render(<CheckoutForm />);
+
+            fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: 'guest@example.com' } });
+            fireEvent.change(screen.getByLabelText(/phone number/i), { target: { value: '555-9999' } });
+            fireEvent.click(screen.getByRole('button', { name: /pay now/i }));
+
+            await waitFor(() => {
+                expect(processPayment).toHaveBeenCalledWith(
+                    mockHeldSeat.reservationId,
+                    'guest@example.com',
+                    '555-9999'
+                );
+            });
+        });
+
+        it('shows error toast when seat is taken (409)', async () => {
+            const { processPayment, SeatTakenError } = api;
+            vi.mocked(processPayment).mockRejectedValue(new SeatTakenError('Seat is no longer available'));
+
+            const { toast } = await import('sonner');
+
+            render(<CheckoutForm />);
+
+            fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: 'test@example.com' } });
+            fireEvent.change(screen.getByLabelText(/phone number/i), { target: { value: '555-0100' } });
+            fireEvent.click(screen.getByRole('button', { name: /pay now/i }));
+
+            await waitFor(() => {
+                expect(toast.error).toHaveBeenCalledWith(
+                    expect.stringContaining('no longer available')
+                );
+            });
+        });
+
+        it('shows error toast when hold is expired (410)', async () => {
+            const { processPayment, ApiError } = api;
+            vi.mocked(processPayment).mockRejectedValue(new ApiError(410, 'Hold expired'));
+
+            const { toast } = await import('sonner');
+
+            render(<CheckoutForm />);
+
+            fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: 'test@example.com' } });
+            fireEvent.change(screen.getByLabelText(/phone number/i), { target: { value: '555-0100' } });
+            fireEvent.click(screen.getByRole('button', { name: /pay now/i }));
+
+            await waitFor(() => {
+                expect(toast.error).toHaveBeenCalledWith(
+                    expect.stringContaining('expired')
+                );
+            });
+        });
+
+        it('shows generic error toast on unexpected failure', async () => {
+            const { processPayment } = api;
+            vi.mocked(processPayment).mockRejectedValue(new Error('Network error'));
+
+            const { toast } = await import('sonner');
+
+            render(<CheckoutForm />);
+
+            fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: 'test@example.com' } });
+            fireEvent.change(screen.getByLabelText(/phone number/i), { target: { value: '555-0100' } });
+            fireEvent.click(screen.getByRole('button', { name: /pay now/i }));
+
+            await waitFor(() => {
+                expect(toast.error).toHaveBeenCalledWith(
+                    expect.stringContaining('failed')
+                );
+            });
+        });
+
+        it('re-enables form after payment error', async () => {
+            const { processPayment } = api;
+            vi.mocked(processPayment).mockRejectedValue(new Error('Network error'));
+
+            render(<CheckoutForm />);
+
+            fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: 'test@example.com' } });
+            fireEvent.change(screen.getByLabelText(/phone number/i), { target: { value: '555-0100' } });
+            fireEvent.click(screen.getByRole('button', { name: /pay now/i }));
+
+            await waitFor(() => {
+                expect(screen.getByRole('button', { name: /pay now/i })).not.toBeDisabled();
+            });
+        });
     });
 });

@@ -48,3 +48,10 @@ export interface HoldSeatResponse {
     holdExpiresAt: string;
     reservationId: string;
 }
+
+export interface PaymentResponse {
+    reservationId: string;
+    status: SeatStatus;
+    seatId: string;
+    confirmationNumber: string;
+}
