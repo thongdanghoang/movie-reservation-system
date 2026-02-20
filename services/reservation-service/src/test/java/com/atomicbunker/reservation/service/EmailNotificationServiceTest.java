@@ -12,6 +12,9 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import io.quarkus.test.junit.mockito.InjectSpy;
+import org.mockito.Mockito;
+
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @QuarkusTest
@@ -19,6 +22,9 @@ public class EmailNotificationServiceTest {
 
     @Inject
     EventBus eventBus;
+
+    @InjectSpy
+    EmailNotificationService emailNotificationService;
 
     @Test
     public void testSeatSoldEmailBroadcastsWithoutError() throws InterruptedException {
@@ -32,24 +38,19 @@ public class EmailNotificationServiceTest {
         seat.setStatus(SeatStatus.SOLD);
         seat.setPaidAt(Instant.now());
 
-        // We use a CountDownLatch to wait for the async consumer if we want to observe
-        // logs,
-        // but just sending the message and ensuring it doesn't fail the bus is enough
-        // to verify
-        // wire-up in this simple "simulated" test.
         CountDownLatch latch = new CountDownLatch(1);
 
-        // We can manually publish to the eventbus
+        // When the service method is called, count down the latch
+        Mockito.doAnswer(invocation -> {
+            latch.countDown();
+            return invocation.callRealMethod();
+        }).when(emailNotificationService).sendEmailConfirmation(Mockito.any());
+
+        // Target the event
         eventBus.publish("seat-sold-email", seat);
 
-        // Wait a bit to let the simulated email run (it has a 2-second delay in actual
-        // code,
-        // so we just wait 3 seconds to see if anything blows up, though it's
-        // asynchronous)
-        boolean finished = latch.await(3, TimeUnit.SECONDS);
-
-        // it shouldn't release latch, so it's false, but the test passes if no
-        // exceptions occurred on the event loop.
-        assertTrue(true);
+        // Wait for the consumer to be invoked
+        boolean completed = latch.await(5, TimeUnit.SECONDS);
+        assertTrue(completed, "EmailNotificationService consumer was not invoked within timeout");
     }
 }

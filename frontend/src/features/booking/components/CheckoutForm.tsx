@@ -74,7 +74,10 @@ export function CheckoutForm({ onCancel }: CheckoutFormProps) {
 
     if (isSuccess && heldSeat) {
         return (
-            <BookingConfirmation reservationId={heldSeat.reservationId} />
+            <BookingConfirmation
+                reservationId={heldSeat.reservationId}
+                sessionId={heldSeat.sessionId}
+            />
         );
     }
 

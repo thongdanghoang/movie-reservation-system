@@ -164,12 +164,18 @@ export async function processPayment(
     return response.json();
 }
 
-export async function getTicket(reservationId: string): Promise<TicketResponse> {
+export async function getTicket(reservationId: string, sessionId?: string): Promise<TicketResponse> {
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+    };
+
+    if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/v1/reservations/${encodeURIComponent(reservationId)}/ticket`, {
         method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers,
     });
 
     if (!response.ok) {

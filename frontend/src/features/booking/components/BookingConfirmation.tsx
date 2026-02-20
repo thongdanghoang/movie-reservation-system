@@ -7,33 +7,39 @@ import { TicketResponse } from '@/shared/types';
 
 interface BookingConfirmationProps {
     reservationId: string;
+    sessionId?: string;
 }
 
-export function BookingConfirmation({ reservationId }: BookingConfirmationProps) {
+export function BookingConfirmation({ reservationId, sessionId }: BookingConfirmationProps) {
     const [ticket, setTicket] = useState<TicketResponse | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         let mounted = true;
+        let retryTimer: NodeJS.Timeout | null = null;
 
-        async function fetchTicket() {
+        async function fetchTicket(attempt = 0) {
             try {
-                // To display the ticket immediately after booking, we might need a small delay 
-                // in case of any database replication lag, or we can fetch immediately since 
-                // we're hitting the same service.
-                const data = await getTicket(reservationId);
+                const data = await getTicket(reservationId, sessionId);
                 if (mounted) {
                     setTicket(data);
                     setIsLoading(false);
                 }
             } catch (err) {
-                if (mounted) {
-                    if (err instanceof ApiError) {
-                        setError(err.message);
-                    } else {
-                        setError('Failed to load ticket information');
-                    }
+                const maxAttempts = 5;
+                const isNotFound = err instanceof ApiError && err.status === 404;
+
+                if (isNotFound && attempt < maxAttempts && mounted) {
+                    // Exponential backoff: 1s, 2s, 4s, 8s, 10s
+                    const delay = Math.min(1000 * 2 ** attempt, 10000);
+                    retryTimer = setTimeout(() => {
+                        if (mounted) fetchTicket(attempt + 1);
+                    }, delay);
+                } else if (mounted) {
+                    setError(
+                        err instanceof ApiError ? err.message : 'Failed to load ticket information'
+                    );
                     setIsLoading(false);
                 }
             }
@@ -43,8 +49,9 @@ export function BookingConfirmation({ reservationId }: BookingConfirmationProps)
 
         return () => {
             mounted = false;
+            if (retryTimer) clearTimeout(retryTimer);
         };
-    }, [reservationId]);
+    }, [reservationId, sessionId]);
 
     if (isLoading) {
         return (

@@ -4,6 +4,7 @@ import com.atomicbunker.reservation.dto.TicketResponse;
 import com.atomicbunker.reservation.service.TicketService;
 import io.smallrye.mutiny.Uni;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -21,7 +22,9 @@ public class TicketResource {
 
     @GET
     @Path("/{reservationId}/ticket")
-    public Uni<TicketResponse> getTicket(@PathParam("reservationId") UUID reservationId) {
-        return ticketService.getTicket(reservationId);
+    @io.quarkus.hibernate.reactive.panache.common.WithSession
+    public Uni<TicketResponse> getTicket(@PathParam("reservationId") UUID reservationId,
+            @HeaderParam("X-Session-ID") String sessionId) {
+        return ticketService.getTicket(reservationId, sessionId);
     }
 }
