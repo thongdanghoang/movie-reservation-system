@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { SeatMap } from '@/features/seatmap/components/SeatMap';
 import { HoldTimer } from '@/features/booking/components/HoldTimer';
+import { CheckoutForm } from '@/features/booking/components/CheckoutForm';
 import { useSeatWebSocket } from '@/features/seatmap/hooks/useSeatWebSocket';
 import { useSeatStore } from '@/stores/seatStore';
 import { getSeats, holdSeat, SeatTakenError } from '@/lib/api';
@@ -10,7 +11,7 @@ import type { Seat, ShowtimeDetails } from '@/shared/types';
 import { toast } from 'sonner';
 
 // Generate a session ID for this booking session
-const SESSION_ID = typeof window !== 'undefined' 
+const SESSION_ID = typeof window !== 'undefined'
     ? localStorage.getItem('booking_session_id') || crypto.randomUUID()
     : crypto.randomUUID();
 
@@ -26,7 +27,7 @@ export default function BookingPage({ params }: BookingPageProps) {
     const [showtimeId, setShowtimeId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    
+
     const setSeats = useSeatStore((state) => state.setSeats);
     const updateSeatStatus = useSeatStore((state) => state.updateSeatStatus);
     const selectedSeats = useSeatStore((state) => state.selectedSeats);
@@ -36,7 +37,7 @@ export default function BookingPage({ params }: BookingPageProps) {
     const setHeldSeat = useSeatStore((state) => state.setHeldSeat);
     const setIsHolding = useSeatStore((state) => state.setIsHolding);
     const clearHold = useSeatStore((state) => state.clearHold);
-    
+
     useSeatWebSocket(showtimeId);
 
     useEffect(() => {
@@ -85,14 +86,14 @@ export default function BookingPage({ params }: BookingPageProps) {
         }
 
         setIsHolding(true);
-        
+
         try {
             const response = await holdSeat(seat.id, SESSION_ID);
-            
+
             // Success - update local state
             updateSeatStatus(seat.id, 'HELD');
             setHeldSeat(response);
-            
+
             toast.success('Seat held!', {
                 description: 'You have 5 minutes to complete your booking.'
             });
@@ -124,6 +125,13 @@ export default function BookingPage({ params }: BookingPageProps) {
         }
     }, [heldSeat, updateSeatStatus, clearHold]);
 
+    const handleCancelHold = useCallback(() => {
+        if (heldSeat) {
+            updateSeatStatus(heldSeat.seatId, 'AVAILABLE');
+            clearHold();
+        }
+    }, [heldSeat, updateSeatStatus, clearHold]);
+
     if (loading) {
         return (
             <div className="container mx-auto px-4 py-8">
@@ -142,13 +150,13 @@ export default function BookingPage({ params }: BookingPageProps) {
                     <h2 className="text-lg font-semibold text-red-800 mb-2">Failed to Load Seats</h2>
                     <p className="text-red-600 mb-4">{error}</p>
                     <div className="flex gap-3">
-                        <button 
+                        <button
                             onClick={() => window.location.reload()}
                             className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                         >
                             Try Again
                         </button>
-                        <button 
+                        <button
                             onClick={() => window.history.back()}
                             className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
                         >
@@ -171,26 +179,26 @@ export default function BookingPage({ params }: BookingPageProps) {
                 <div className="mb-6">
                     <h1 className="text-2xl font-bold mb-2">Select Your Seats</h1>
                 </div>
-                
+
                 <div className="flex flex-col items-center justify-center min-h-[400px] bg-gray-50 rounded-lg border border-gray-200 p-8">
-                    <svg 
-                        className="w-16 h-16 text-gray-400 mb-4" 
-                        fill="none" 
-                        stroke="currentColor" 
+                    <svg
+                        className="w-16 h-16 text-gray-400 mb-4"
+                        fill="none"
+                        stroke="currentColor"
                         viewBox="0 0 24 24"
                     >
-                        <path 
-                            strokeLinecap="round" 
-                            strokeLinejoin="round" 
-                            strokeWidth={1.5} 
-                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" 
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1.5}
+                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
                         />
                     </svg>
                     <h2 className="text-xl font-semibold text-gray-700 mb-2">No Seats Available</h2>
                     <p className="text-gray-500 text-center max-w-md">
                         There are no seats configured for this showtime. Please try selecting a different showtime.
                     </p>
-                    <button 
+                    <button
                         onClick={() => window.history.back()}
                         className="mt-6 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                     >
@@ -223,24 +231,32 @@ export default function BookingPage({ params }: BookingPageProps) {
                 </div>
             )}
 
-            {heldSeat && (
-                <div className="mb-4">
-                    <HoldTimer 
-                        expiresAt={new Date(heldSeat.holdExpiresAt)} 
-                        onExpire={handleHoldExpire}
-                    />
-                </div>
-            )}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2">
+                    {heldSeat && (
+                        <div className="mb-4">
+                            <HoldTimer
+                                expiresAt={new Date(heldSeat.holdExpiresAt)}
+                                onExpire={handleHoldExpire}
+                            />
+                        </div>
+                    )}
 
-            {selectedSeats.length > 0 && (
-                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-blue-800">
-                        <span className="font-medium">{selectedSeats.length}</span> seat(s) selected
-                    </p>
-                </div>
-            )}
+                    {selectedSeats.length > 0 && (
+                        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-blue-800">
+                                <span className="font-medium">{selectedSeats.length}</span> seat(s) selected
+                            </p>
+                        </div>
+                    )}
 
-            <SeatMap onSeatClick={handleSeatClick} />
+                    <SeatMap onSeatClick={handleSeatClick} />
+                </div>
+
+                <div className="lg:col-span-1">
+                    <CheckoutForm onCancel={handleCancelHold} />
+                </div>
+            </div>
         </div>
     );
 }
