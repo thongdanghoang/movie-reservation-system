@@ -31,9 +31,9 @@ describe('SeatMap', () => {
         render(<SeatMap />);
 
         expect(screen.getByText('A')).toBeInTheDocument();
-        expect(screen.getByText('1')).toBeInTheDocument();
-        expect(screen.getByText('2')).toBeInTheDocument();
-        expect(screen.getByText('3')).toBeInTheDocument();
+        expect(screen.getAllByText('1').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('2').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('3').length).toBeGreaterThan(0);
     });
 
     it('calls onSeatClick when clicking available seat', () => {

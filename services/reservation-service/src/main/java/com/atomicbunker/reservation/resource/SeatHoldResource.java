@@ -7,6 +7,7 @@ import com.atomicbunker.reservation.service.SeatHoldService;
 import io.smallrye.mutiny.Uni;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
@@ -38,6 +39,20 @@ public class SeatHoldResource {
             .recoverWithItem(ex -> Response.status(Response.Status.CONFLICT)
                 .entity(Map.of(
                     "code", "SEAT_TAKEN",
+                    "message", ex.getMessage()
+                ))
+                .build());
+    }
+
+    @DELETE
+    @Path("/{seatId}/hold")
+    public Uni<Response> releaseSeatHold(@PathParam("seatId") UUID seatId) {
+        return seatHoldService.releaseSeatHold(seatId)
+            .map(v -> Response.noContent().build())
+            .onFailure(jakarta.ws.rs.NotFoundException.class)
+            .recoverWithItem(ex -> Response.status(Response.Status.NOT_FOUND)
+                .entity(Map.of(
+                    "code", "NOT_FOUND",
                     "message", ex.getMessage()
                 ))
                 .build());
