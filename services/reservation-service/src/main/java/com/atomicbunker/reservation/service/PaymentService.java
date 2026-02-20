@@ -15,6 +15,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.PessimisticLockException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.reactive.mutiny.Mutiny;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -28,6 +29,20 @@ public class PaymentService {
     private final SeatHoldService seatHoldService;
     private final SeatWebSocket seatWebSocket;
     private final ObjectMapper objectMapper;
+    /**
+     * Injected to open an independent session+transaction for expired-hold
+     * releases.
+     * 
+     * @WithTransaction on releaseSeatHold() would join the current outer
+     *                  transaction
+     *                  (REQUIRED semantics) and be rolled back together with the
+     *                  HoldExpiredException.
+     *                  Using sessionFactory.withTransaction() starts a brand-new
+     *                  session that commits
+     *                  independently, ensuring the seat is freed even though the
+     *                  outer call fails.
+     */
+    private final Mutiny.SessionFactory sessionFactory;
 
     @WithTransaction
     public Uni<PaymentResponse> processPayment(UUID reservationId, String sessionId, String email, String phone) {
@@ -59,12 +74,25 @@ public class PaymentService {
                     }
 
                     if (seat.isHoldExpired()) {
-                        // Delegate release to SeatHoldService which runs in its OWN @WithTransaction.
-                        // This ensures the AVAILABLE status update is committed in a separate
-                        // transaction BEFORE this outer transaction emits the failure Uni.
-                        // Using persistAndFlush() here wouldn't help: @WithTransaction rolls back
-                        // the whole outer transaction (including the flush) when the Uni fails.
-                        return seatHoldService.releaseSeatHold(seat.getId(), seat.getHeldBy())
+                        // Release the hold in a BRAND-NEW independent session+transaction so it
+                        // commits regardless of this outer @WithTransaction being rolled back.
+                        // Calling seatHoldService.releaseSeatHold() would join the current outer
+                        // transaction (@WithTransaction = REQUIRED) and be rolled back together
+                        // with the HoldExpiredException, leaving the seat stuck in HELD state.
+                        UUID seatId = seat.getId();
+                        String heldBy = seat.getHeldBy();
+                        return sessionFactory.withTransaction(
+                                (s, tx) -> s.find(Seat.class, seatId)
+                                        .chain(toRelease -> {
+                                            if (toRelease == null) {
+                                                return Uni.createFrom().voidItem();
+                                            }
+                                            toRelease.setStatus(SeatStatus.AVAILABLE);
+                                            toRelease.setHeldAt(null);
+                                            toRelease.setHeldBy(null);
+                                            toRelease.setReservationId(null);
+                                            return s.persist(toRelease).replaceWithVoid();
+                                        }))
                                 .chain(() -> Uni.createFrom().failure(
                                         new HoldExpiredException("Your hold has expired. Please select a new seat.")));
                     }
@@ -79,7 +107,11 @@ public class PaymentService {
                     seat.setPhone(phone);
                     seat.setPaidAt(Instant.now());
 
+                    // flush() before broadcast: surface any DB constraint violations
+                    // (e.g. unique violation) before sending the WebSocket notification,
+                    // so clients never receive a SEAT_SOLD event for a failed transaction.
                     return seatRepository.persist(seat)
+                            .call(s -> seatRepository.flush())
                             .chain(updatedSeat -> {
                                 broadcastSeatSold(updatedSeat);
                                 return Uni.createFrom().item(createPaymentResponse(updatedSeat));
@@ -95,8 +127,11 @@ public class PaymentService {
             message.put("status", seat.getStatus().name());
             message.put("reservationId", seat.getReservationId().toString());
 
+            // Use showtimeId (read-only FK mirror on Seat) — seat.getShowtime() is
+            // FetchType.LAZY and is not initialised by the native SQL query, causing a
+            // LazyInitializationException if dereferenced here.
             seatWebSocket.broadcastSeatUpdate(
-                    seat.getShowtime().getId().toString(),
+                    seat.getShowtimeId().toString(),
                     message);
         } catch (Exception e) {
             log.error("Failed to broadcast seat sold for seat {}", seat.getId(), e);

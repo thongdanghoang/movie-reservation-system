@@ -89,8 +89,9 @@ public class SeatHoldService {
             message.put("reservationId", seat.getReservationId().toString());
             message.put("heldAt", seat.getHeldAt().toString());
 
+            // Use showtimeId (read-only FK mirror) — avoids lazy-load failure
             seatWebSocket.broadcastSeatUpdate(
-                    seat.getShowtime().getId().toString(),
+                    seat.getShowtimeId().toString(),
                     message);
         } catch (Exception e) {
             log.error("Failed to broadcast seat hold for seat {}", seat.getId(), e);
@@ -156,8 +157,9 @@ public class SeatHoldService {
             message.put("seatId", seat.getId().toString());
             message.put("status", seat.getStatus().name());
 
+            // Use showtimeId (read-only FK mirror) — avoids lazy-load failure
             seatWebSocket.broadcastSeatUpdate(
-                    seat.getShowtime().getId().toString(),
+                    seat.getShowtimeId().toString(),
                     message);
         } catch (Exception e) {
             log.error("Failed to broadcast seat hold release for seat {}", seat.getId(), e);
