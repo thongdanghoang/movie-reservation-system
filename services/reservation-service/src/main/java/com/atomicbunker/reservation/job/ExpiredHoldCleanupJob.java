@@ -10,56 +10,73 @@ import io.quarkus.scheduler.ScheduledExecution;
 import io.smallrye.mutiny.Uni;
 import io.quarkus.hibernate.reactive.panache.common.WithSession;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import org.jboss.logging.Logger;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.CollectionUtils;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
+import java.util.UUID;
 
 @ApplicationScoped
+@RequiredArgsConstructor
+@Slf4j
 public class ExpiredHoldCleanupJob {
 
-    private static final Logger LOG = Logger.getLogger(ExpiredHoldCleanupJob.class);
-    private static final int HOLD_TIMEOUT_MINUTES = 5;
     private static final String EVENT_TYPE_HOLD_EXPIRED = "HOLD_EXPIRED";
 
-    @Inject
-    SeatRepository seatRepository;
+    private final SeatRepository seatRepository;
+    private final SeatWebSocket seatWebSocket;
 
-    @Inject
-    SeatWebSocket seatWebSocket;
+    @ConfigProperty(name = "app.hold.timeout-minutes", defaultValue = "5")
+    int holdTimeoutMinutes;
 
-    @Scheduled(cron = "0 */1 * * * ?")
+    @ConfigProperty(name = "app.hold.cleanup-cron", defaultValue = "0 */1 * * * ?")
+    String cleanupCron;
+
+    @ConfigProperty(name = "app.hold.cleanup-enabled", defaultValue = "true")
+    boolean cleanupEnabled;
+
+    @Scheduled(cron = "${app.hold.cleanup-cron}")
     @WithSession
     public Uni<Void> cleanupExpiredHolds(ScheduledExecution execution) {
-        LOG.infof("Starting expired hold cleanup job");
+        if (!cleanupEnabled) {
+            log.debug("Cleanup job is disabled");
+            return Uni.createFrom().voidItem();
+        }
 
-        Instant expirationThreshold = Instant.now().minus(HOLD_TIMEOUT_MINUTES, ChronoUnit.MINUTES);
+        log.info("Starting expired hold cleanup job");
+
+        var expirationThreshold = Instant.now().minus(holdTimeoutMinutes, ChronoUnit.MINUTES);
 
         return seatRepository.findExpiredHolds(expirationThreshold)
             .flatMap(this::processExpiredHolds)
             .onFailure().recoverWithUni(t -> {
-                LOG.errorf("Failed to process expired holds: %s", t.getMessage());
+                log.error("Failed to process expired holds: {}", t.getMessage());
                 return Uni.createFrom().voidItem();
             });
     }
 
-    private Uni<Void> processExpiredHolds(List<Seat> expiredSeats) {
-        if (expiredSeats == null || expiredSeats.isEmpty()) {
-            LOG.debug("No expired holds found");
+    private Uni<Void> processExpiredHolds(java.util.List<Seat> expiredSeats) {
+        if (CollectionUtils.isEmpty(expiredSeats)) {
+            log.debug("No expired holds found");
             return Uni.createFrom().voidItem();
         }
 
-        LOG.infof("Found %d expired holds to process", expiredSeats.size());
+        log.info("Found {} expired holds to process", expiredSeats.size());
 
         Uni<Void> result = Uni.createFrom().voidItem();
-        for (Seat seat : expiredSeats) {
+        for (var seat : expiredSeats) {
             result = result.flatMap(v -> processExpiredHold(seat));
         }
         
         return result.map(v -> {
-            LOG.infof("Completed expired hold cleanup - processed %d seats", expiredSeats.size());
+            log.info("Completed expired hold cleanup - processed {} seats", expiredSeats.size());
             return null;
         });
     }
@@ -72,17 +89,22 @@ public class ExpiredHoldCleanupJob {
                 }
 
                 if (lockedSeat.getStatus() != SeatStatus.HELD) {
-                    LOG.debugf("Seat %s is no longer held, skipping", lockedSeat.getId());
+                    log.debug("Seat {} is no longer held, skipping", lockedSeat.getId());
                     return Uni.createFrom().voidItem();
                 }
 
                 if (lockedSeat.getHeldAt() != null && 
-                    lockedSeat.getHeldAt().plus(HOLD_TIMEOUT_MINUTES, ChronoUnit.MINUTES).isAfter(Instant.now())) {
-                    LOG.debugf("Seat %s hold has not yet expired", lockedSeat.getId());
+                    lockedSeat.getHeldAt().plus(holdTimeoutMinutes, ChronoUnit.MINUTES).isAfter(Instant.now())) {
+                    log.debug("Seat {} hold has not yet expired", lockedSeat.getId());
                     return Uni.createFrom().voidItem();
                 }
 
-                Instant now = Instant.now();
+                var now = Instant.now();
+                var reservationIdForAudit = lockedSeat.getReservationId();
+                var showtimeIdForAudit = lockedSeat.getShowtimeId();
+                var seatRowForAudit = lockedSeat.getSeatRow();
+                var seatColumnForAudit = lockedSeat.getSeatColumn();
+
                 lockedSeat.setStatus(SeatStatus.AVAILABLE);
                 lockedSeat.setHeldAt(null);
                 lockedSeat.setHeldBy(null);
@@ -91,41 +113,45 @@ public class ExpiredHoldCleanupJob {
                 lockedSeat.setPhone(null);
 
                 return seatRepository.persist(lockedSeat)
-                    .map(updated -> {
-                        LOG.infof("Released expired hold for seat %s", updated.getId());
+                    .flatMap(updated -> {
+                        log.info("Released expired hold for seat {}", updated.getId());
                         broadcastSeatUpdate(updated);
-                        createAuditLog(seat, now);
-                        return null;
+                        return createAuditLog(updated.getId(), reservationIdForAudit, showtimeIdForAudit,
+                                seatRowForAudit, seatColumnForAudit, now);
                     });
             })
             .onFailure().recoverWithUni(t -> {
-                LOG.warnf("Failed to process seat %s: %s", seat.getId(), t.getMessage());
+                log.warn("Failed to process seat {}: {}", seat.getId(), t.getMessage());
                 return Uni.createFrom().voidItem();
             });
     }
 
-    private void createAuditLog(Seat seat, Instant timestamp) {
-        try {
-            AuditLog auditLog = new AuditLog();
-            auditLog.reservationId = seat.getReservationId() != null ? seat.getReservationId().toString() : null;
-            auditLog.seatId = seat.getId().toString();
-            auditLog.showtimeId = seat.getShowtimeId() != null ? seat.getShowtimeId().toString() : null;
-            auditLog.eventType = EVENT_TYPE_HOLD_EXPIRED;
-            auditLog.timestamp = timestamp;
-            auditLog.metadata = String.format("Seat hold expired after %d minutes. Row: %s, Column: %d", 
-                HOLD_TIMEOUT_MINUTES, seat.getSeatRow(), seat.getSeatColumn());
-            
-            auditLog.persist();
-            LOG.debugf("Created audit log for expired hold: reservation=%s, seat=%s", 
-                auditLog.reservationId, auditLog.seatId);
-        } catch (Exception e) {
-            LOG.warnf("Failed to create audit log: %s", e.getMessage());
-        }
+    private Uni<Void> createAuditLog(UUID seatId, UUID reservationId, UUID showtimeId, 
+                                     String seatRow, Integer seatColumn, Instant timestamp) {
+        var auditLog = new AuditLog();
+        auditLog.setReservationId(reservationId != null ? reservationId.toString() : null);
+        auditLog.setSeatId(seatId.toString());
+        auditLog.setShowtimeId(showtimeId != null ? showtimeId.toString() : null);
+        auditLog.setEventType(EVENT_TYPE_HOLD_EXPIRED);
+        auditLog.setTimestamp(timestamp);
+        auditLog.setMetadata(String.format("Seat hold expired after %d minutes. Row: %s, Column: %d", 
+            holdTimeoutMinutes, seatRow, seatColumn));
+        
+        return auditLog.persist()
+            .chain(a -> {
+                log.debug("Created audit log for expired hold: reservation={}, seat={}", 
+                    auditLog.getReservationId(), auditLog.getSeatId());
+                return Uni.createFrom().voidItem();
+            })
+            .onFailure().recoverWithUni(t -> {
+                log.warn("Failed to create audit log: {}", t.getMessage());
+                return Uni.createFrom().voidItem();
+            });
     }
 
     private void broadcastSeatUpdate(Seat seat) {
         if (seat.getShowtimeId() != null) {
-            SeatUpdatePayload payload = new SeatUpdatePayload(
+            var payload = new SeatUpdatePayload(
                 seat.getId().toString(),
                 seat.getShowtimeId().toString(),
                 seat.getSeatRow(),
@@ -136,32 +162,15 @@ public class ExpiredHoldCleanupJob {
         }
     }
 
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class SeatUpdatePayload {
         private String seatId;
         private String showtimeId;
         private String row;
         private Integer column;
         private String status;
-
-        public SeatUpdatePayload() {}
-
-        public SeatUpdatePayload(String seatId, String showtimeId, String row, Integer column, String status) {
-            this.seatId = seatId;
-            this.showtimeId = showtimeId;
-            this.row = row;
-            this.column = column;
-            this.status = status;
-        }
-
-        public String getSeatId() { return seatId; }
-        public void setSeatId(String seatId) { this.seatId = seatId; }
-        public String getShowtimeId() { return showtimeId; }
-        public void setShowtimeId(String showtimeId) { this.showtimeId = showtimeId; }
-        public String getRow() { return row; }
-        public void setRow(String row) { this.row = row; }
-        public Integer getColumn() { return column; }
-        public void setColumn(Integer column) { this.column = column; }
-        public String getStatus() { return status; }
-        public void setStatus(String status) { this.status = status; }
     }
 }

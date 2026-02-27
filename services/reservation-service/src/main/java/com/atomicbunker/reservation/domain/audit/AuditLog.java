@@ -1,31 +1,38 @@
 package com.atomicbunker.reservation.domain.audit;
 
-import io.quarkus.mongodb.panache.PanacheMongoEntity;
+import io.quarkus.mongodb.panache.reactive.ReactivePanacheMongoEntity;
 import io.quarkus.mongodb.panache.common.MongoEntity;
+import lombok.Getter;
+import lombok.Setter;
 import org.bson.codecs.pojo.annotations.BsonProperty;
 
 import java.time.Instant;
+import java.util.List;
+
+import io.smallrye.mutiny.Uni;
 
 @MongoEntity(collection = "audit_logs")
-public class AuditLog extends PanacheMongoEntity {
+@Getter
+@Setter
+public class AuditLog extends ReactivePanacheMongoEntity {
 
     @BsonProperty("reservation_id")
-    public String reservationId;
+    private String reservationId;
 
     @BsonProperty("seat_id")
-    public String seatId;
+    private String seatId;
 
     @BsonProperty("event_type")
-    public String eventType;
+    private String eventType;
 
-    public Instant timestamp;
+    private Instant timestamp;
 
-    public String metadata;
+    private String metadata;
 
     @BsonProperty("showtime_id")
-    public String showtimeId;
+    private String showtimeId;
 
-    public static java.util.List<AuditLog> findByReservationId(String reservationId) {
+    public static Uni<List<AuditLog>> findByReservationId(String reservationId) {
         return list("reservationId", reservationId);
     }
 }

@@ -1,6 +1,7 @@
 package com.atomicbunker.reservation.job;
 
 import io.quarkus.test.junit.QuarkusTest;
+import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -8,9 +9,11 @@ import static org.junit.jupiter.api.Assertions.*;
 @QuarkusTest
 class ExpiredHoldCleanupJobTest {
 
+    @Inject
+    ExpiredHoldCleanupJob job;
+
     @Test
-    void testJobExists() {
-        ExpiredHoldCleanupJob job = new ExpiredHoldCleanupJob();
+    void testJobBeanExists() {
         assertNotNull(job);
     }
 }
