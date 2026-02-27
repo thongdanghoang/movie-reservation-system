@@ -3,6 +3,7 @@ package com.atomicbunker.reservation.domain;
 import io.quarkus.hibernate.reactive.panache.PanacheRepositoryBase;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -72,5 +73,12 @@ public class SeatRepository implements PanacheRepositoryBase<Seat, UUID> {
      */
     public Uni<Seat> findByReservationId(UUID reservationId) {
         return find("reservationId", reservationId).firstResult();
+    }
+
+    /**
+     * Find all seats that are HELD and have passed the expiration threshold.
+     */
+    public Uni<List<Seat>> findExpiredHolds(Instant expirationThreshold) {
+        return find("status = ?1 and heldAt < ?2", SeatStatus.HELD, expirationThreshold).list();
     }
 }
