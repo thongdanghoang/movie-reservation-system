@@ -8,7 +8,7 @@ import com.atomicbunker.reservation.websocket.SeatWebSocket;
 import io.quarkus.scheduler.Scheduled;
 import io.quarkus.scheduler.ScheduledExecution;
 import io.smallrye.mutiny.Uni;
-import io.quarkus.hibernate.reactive.panache.common.WithSession;
+import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 import jakarta.enterprise.context.ApplicationScoped;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -43,7 +43,7 @@ public class ExpiredHoldCleanupJob {
     boolean cleanupEnabled;
 
     @Scheduled(cron = "${app.hold.cleanup-cron}")
-    @WithSession
+    @WithTransaction
     public Uni<Void> cleanupExpiredHolds(ScheduledExecution execution) {
         if (!cleanupEnabled) {
             log.debug("Cleanup job is disabled");
